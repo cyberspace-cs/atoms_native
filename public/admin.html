@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atoms Native · 研效看板</title>
+<style>
+  :root{--bg:#0b1020;--card:#141b33;--accent:#5b8cff;--accent2:#9b6bff;--txt:#e8ecff;--ok:#46d39a;--warn:#ffb454;--bad:#ff6b8a}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;background:radial-gradient(1200px 600px at 70% -10%,#1b2550,#0b1020);color:var(--txt);min-height:100vh;padding:24px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{opacity:.6;font-size:13px;margin-bottom:20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px}
+  .kpi{background:var(--card);border:1px solid #243056;border-radius:14px;padding:16px}
+  .kpi .v{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kpi .l{font-size:12px;opacity:.6;margin-top:4px}
+  .card{background:var(--card);border:1px solid #243056;border-radius:14px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;margin:0 0 12px;opacity:.85}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #1d2748}
+  th{opacity:.55;font-weight:600}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px}
+  .ok{background:#15351f;color:var(--ok)} .bad{background:#3a1d2a;color:var(--bad)} .warn{background:#3a2e15;color:var(--warn)}
+  .bar{height:8px;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  a{color:var(--accent)}
+  button{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:0;border-radius:10px;padding:9px 14px;font-size:13px;cursor:pointer;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 Atoms Native · 研效看板</h1>
+  <div class="sub">生成质量 / 成本 / 延迟 / 安全 / 用户反馈 实时监控（生产化「可观测性」）</div>
+  <button onclick="load()">🔄 刷新</button>
+  <div class="grid" id="kpis"></div>
+
+  <div class="card">
+    <h2>按智能体 × 模型 的调用分布</h2>
+    <table id="byam"><thead><tr><th>智能体</th><th>模型</th><th>调用数</th><th>失败(mock)</th><th>平均延迟</th><th>Token</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>最近 20 次调用</h2>
+    <table id="recent"><thead><tr><th>时间</th><th>智能体</th><th>模型</th><th>延迟</th><th>类型</th><th>安全分</th></tr></thead><tbody></tbody></table>
+  </div>
+</div>
+<script>
+async function load(){
+  const r = await fetch('/api/metrics'); const d = await r.json();
+  const t = d.totals||{};
+  const kpis = [
+    ['总调用数', t.c ?? 0],
+    ['失败(mock)占比', t.c ? ((t.m/t.c*100).toFixed(1)+'%') : '0%'],
+    ['平均延迟(ms)', Math.round(t.avg_ms||0)],
+    ['累计 Token(估)', (t.toks||0).toLocaleString()],
+    ['已存版本数', (d.versions&&d.versions.c)||0],
+    ['平均安全分', d.versions&&d.versions.avg_sec!=null ? Math.round(d.versions.avg_sec) : '—'],
+    ['反馈数', (d.feedback&&d.feedback.c)||0],
+    ['平均评分', d.feedback&&d.feedback.avg_rating!=null ? (+d.feedback.avg_rating).toFixed(1) : '—'],
+  ];
+  document.getElementById('kpis').innerHTML = kpis.map(([l,v])=>
+    `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  const tb = document.querySelector('#byam tbody');
+  tb.innerHTML = (d.by_agent_model||[]).map(r=>`
+    <tr><td>${r.agent}</td><td>${r.model}</td><td>${r.n}</td>
+    <td><span class="pill ${r.mock_n>0?'bad':'ok'}">${r.mock_n}</span></td>
+    <td>${Math.round(r.avg_ms||0)}ms</td><td>${(r.toks||0).toLocaleString()}</td></tr>`).join('') ||
+    '<tr><td colspan=6 style="opacity:.5">暂无数据</td></tr>';
+
+  const rc = document.querySelector('#recent tbody');
+  rc.innerHTML = (d.recent_runs||[]).map(r=>`
+    <tr><td>${r.created_at}</td><td>${r.agent}</td><td>${r.model}</td>
+    <td>${r.latency_ms||0}ms</td>
+    <td><span class="pill ${r.mock?'bad':'ok'}">${r.mock?'mock':'real'}</span></td>
+    <td>${r.security_score!=null?r.security_score:'—'}</td></tr>`).join('') ||
+    '<tr><td colspan=6 style="opacity:.5">暂无数据</td></tr>';
+}
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>

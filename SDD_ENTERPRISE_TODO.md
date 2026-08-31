@@ -1,0 +1,100 @@
+# Atoms_Native · 企业级生产化待办清单（SDD 驱动）
+
+> 对齐依据：蚂蚁三面三问（测试/Pass@k + 六能力 / SDD vs Skills / 九道防线）+
+> 联网检索到的企业实践（见每条 `对齐实践`）。每个模块按 SDD 阶段一→六推进：
+> REQ → 改动点清单 → 技术方案 → 人工校验 → 执行开发(DAG) → 验证。
+>
+> 状态图例：⬜ 未开始 · 🟡 进行中 · ✅ 完成 · 🔬 已验证
+
+---
+
+## 0. 基础与门禁
+
+| ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
+|----|------|----------|---------------|------|
+| #0 | SDD 目录与 REQ_ROOT | SDD 规范驱动开发 | `docs/sdd/` 含 REQ_ROOT、各模块 demand/design/tasks；改动点清单可追踪 | ✅ |
+| #23 | CI/CD 评估门禁 + Canary | AI CI/CD: eval-gate + canary + model registry | `ci.yml` 含 evaluation-gate（回归失败则红）、canary 步骤、模型 artifact 注册；无 key 走 mock 门禁 | 🟡 |
+
+---
+
+## 1. 测试与评估（Q1：测试方法论 / Pass@k / 六能力）
+
+| ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
+|----|------|----------|---------------|------|
+| #17 | 评估集 + 多维指标 | LLM eval harness: k≥10 采样、strata-aware gate（结构化输出有效性≥98%）、paired bootstrap CI、人工复核 borderline、harness/model/item 版本审计链 | `cases.json` ≥50 例，覆盖 common/long-tail/adversarial/sensitive/historical-failure 五层；`metrics.py` 含 `bootstrap_ci`/`strata_aggregate`/`structured_output_validity`；`runner.py` 支持 `--runs N`(N≥3) 真实 pass@k + 分层 CI；报告含版本审计链 | 🟡 |
+
+**已知能力缺口（来自 `_eval_report.json` 真实跑分）：**
+- ✅ 11/13 干净通过，valid_rate=1.0，pass@1(有效率)=0.923
+- ⚠️ 2 例诚实 mock：`gen_boundary_empty`、`gen_pure_converter`（格式强制生效，正确标记）
+- ❌ **1 例真实失败：`gen_boundary_long`（企业报销/差旅审批系统，超长复杂规格 → 近空输出 token_est=295）** → 见 #36
+
+---
+
+## 2. 安全（Q3：九道防线 / OWASP）
+
+| ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
+|----|------|----------|---------------|------|
+| #18 | 安全扫描 → OWASP **LLM** Top 10 2025 | OWASP LLM Top 10 2025: LLM01 提示注入 / LLM02 敏感信息泄露 / LLM03 供应链 / LLM05 不当输出处理 / LLM06 过度代理 / LLM07 系统提示泄露 | `scan_idea` 覆盖 LLM01（直接/间接/分隔符混淆/编码绕过）；`scan_html` 覆盖 LLM05(XSS/SQLi/RCE)、LLM06(高危操作需确认/最小权限)、LLM07(系统提示/密钥泄露)；保留原 Web Top 10 检查；单测覆盖 adversarial 样本 | 🟡 |
+
+---
+
+## 3. 认证 / 审计（九道防线 · SOC 2）
+
+| ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
+|----|------|----------|---------------|------|
+| #19 | 认证与审计 → SOC 2 | SOC 2: RBAC(IdP/最小权限/HRIS 自动开通停用)、不可变 WORM 存储(S3 Object Lock/hash-chain)、结构化 JSON 审计(actor/action/resource/timestamp_utc/source_ip/session_id/outcome 五 W)、保留 12 个月、高危告警(失败登录/提权/非工作时间) | 新增 `audit.py`：结构化事件 + hash-chain 追加式 WORM 文件(独立于业务库) + 保留策略；`database.py` 加 `audit_events`/`roles` 表；`main.py` 的 `log_audit` 升级为结构化；高危行为触发告警 | 🟡 |
+
+---
+
+## 4. 并发 / 限流（九道防线 · 资源保护）
+
+| ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
+|----|------|----------|---------------|------|
+| #21 | 限流 → 多租户分布式令牌桶 | 多租户分布式限流: Redis Cluster + Lua 原子脚本、Key=`rl:{tenant}:{endpoint}:{rule}:{dim}`、fail-open 默认、灰度 DRAFT→SHADOW→ENFORCE(%)→ROLLBACK、层级/加权公平桶 | 新增 `ratelimit.py`：Redis+Lua 令牌桶，多租户/多维度；Redis 不可用时优雅降级到进程内；替换 `main.py` 的 `_active`/`_rate_ok`；SHADOW 模式只观测不拦截 | 🟡 |
+
+---
+
+## 5. 可观测性（LLMOps）
+
+| ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
+|----|------|----------|---------------|------|
+| #22 | 追踪 + 指标 + 日志 | LLMOps: OpenTelemetry/OpenInference GenAI 语义约定(span: LLM/AGENT/TOOL/RETRIEVER)、P50/P95/P99 + TTFT 指标、结构化 correlation-id 日志 + PII 脱敏 + prompt hash、prompt/model 版本化回归 | 新增 `observability.py`：OTel 追踪(无 otel 包时 no-op)、指标采集、脱敏日志；接入 `pipeline._agent` 与 `main.py`；`/api/metrics` 增加 `latency_p95`/`ttft`/`by_stratum` | 🟡 |
+
+---
+
+## 6. 大规格生成修复（真实失败）
+
+| ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
+|----|------|----------|---------------|------|
+| #36 | 修复 `gen_boundary_long` | 长上下文/复杂规格工程: plan-then-build 两阶段、规格分块、token 预算、超长输出分段合并 | `pipeline.py` 检测超长/复杂 idea → 先生成结构化 plan(模块拆分)，再分块生成并组装；提升 `max_tokens`；新增 case 验证不再是近空输出 | 🟡 |
+
+---
+
+## 7. 部署（远程）
+
+| ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
+|----|------|----------|---------------|------|
+| #99 | 部署到 taoxie.vip/atoms-native/ | 蓝绿/Canary 发布 + 回滚预案 | scp `server/` → `43.143.231.106:/home/ubuntu/atoms-native`；重启 tmux `atoms`；nginx 子路径校验；回滚脚本就绪 | ⬜ 待用户确认（需远程登录授权） |
+
+---
+
+## 执行顺序（DAG 依赖）
+
+```
+#23 CI 骨架 ─┐
+#18 安全    ─┼─► #17 评估(依赖安全分/结构化输出) ─► #36 大规格修复(依赖评估回归)
+#19 审计    ─┤
+#21 限流    ─┤
+#22 可观测  ─┘
+        └─► #99 部署（最后，需授权）
+```
+
+**本轮目标**：完成 #18/#17/#19/#21/#22/#36 的代码实现与本地验证（mock 模式 + 纯 stdlib 单测），#23 给出 CI 增强，#99 预留接口待授权。
+
+## 参考（联网检索，2026-08-31 → 09-01）
+1. LLM Eval Harness & Pass@k：k≥10 采样、strata-aware gate（结构化输出有效性≥98%）、paired bootstrap CI、human review borderline、harness/model/item 版本审计链。工具：lm-eval-harness / HELM / Inspect / DeepEval / Promptfoo。
+2. OWASP Top 10 for LLM Applications 2025：LLM01 提示注入、LLM02 敏感信息泄露、LLM03 供应链、LLM04 数据/模型投毒、LLM05 不当输出处理、LLM06 过度代理、LLM07 系统提示泄露、LLM08 向量缺陷、LLM09 误导信息、LLM10 无界消耗。
+3. LLMOps Observability：OpenTelemetry/OpenInference GenAI 语义约定；P50/P95/P99/TTFT；结构化日志 correlation-id + PII 脱敏 + prompt hash；工具：Langfuse / Arize Phoenix / TruLens / MLflow。
+4. 多租户分布式限流：Redis Cluster + Lua 令牌桶；Key=`rl:{tenant}:{endpoint}:{rule}:{dim}`；fail-open；DRAFT→SHADOW→ENFORCE(%)→ROLLBACK；层级/加权公平。
+5. AI CI/CD：lint/type/unit → integration(mock) → evaluation gate(回归则失败, run-twice-average) → artifact build → staging → canary(1–5%) → promote/rollback；模型版本化 + artifact registry。
+6. SOC 2 审计日志：RBAC(IdP,最小权限,HRIS 自动开通停用)、WORM/不可变(hash-chain / S3 Object Lock)、结构化 JSON(5W)、保留 12 个月、高危告警。

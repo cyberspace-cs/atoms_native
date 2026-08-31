@@ -7,3 +7,13 @@ venv/
 node_modules/
 dist/
 .DS_Store
+
+# local scratch / dev artifacts (CI uses tests/smoke.py instead)
+_*.log
+_*.py
+_*.json
+_bench_apps/
+_verify_*.png
+_e2e_*
+_server_*
+server/evals/_*

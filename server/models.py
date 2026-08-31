@@ -19,11 +19,13 @@ class ProjectCreate(BaseModel):
 
 class GenerateReq(BaseModel):
     project_id: int
+    model: str | None = None  # optional full model id (e.g. openrouter :free id)
 
 
 class RefineReq(BaseModel):
     project_id: int
     message: str
+    model: str | None = None
 
 
 class RaceReq(BaseModel):

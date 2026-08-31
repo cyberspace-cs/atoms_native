@@ -60,11 +60,12 @@ def get_user_by_token(token: str | None):
     token = token.replace("Bearer ", "").strip()
     conn = get_conn()
     row = conn.execute(
-        "SELECT u.id,u.username,u.created_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=?",
+        "SELECT u.id,u.username,u.role,u.created_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=?",
         (token,),
     ).fetchone()
     conn.close()
-    return row
+    # 返回 dict：下游（require_role 等）用 .get() 访问角色字段
+    return dict(row) if row else None
 
 
 def require_user(authorization: str | None = Header(default=None)):
@@ -72,3 +73,17 @@ def require_user(authorization: str | None = Header(default=None)):
     if not user:
         raise HTTPException(status_code=401, detail="未登录或登录已过期")
     return user
+
+
+def require_role(required_role: str):
+    """RBAC 最小权限依赖工厂：仅允许指定角色访问（SOC 2 CC6）。"""
+
+    def _dep(authorization: str | None = Header(default=None)):
+        user = get_user_by_token(authorization)
+        if not user:
+            raise HTTPException(status_code=401, detail="未登录或登录已过期")
+        if user.get("role") != required_role:
+            raise HTTPException(status_code=403, detail=f"权限不足（需要 {required_role} 角色）")
+        return user
+
+    return _dep

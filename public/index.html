@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Atoms Native · AI 应用生成平台</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="./styles.css">
 </head>
@@ -45,6 +46,7 @@
       <div class="spacer"></div>
       <div class="user">
         <span id="userName" class="uname"></span>
+        <a id="adminLink" class="ghost sm" href="./admin.html" target="_blank">📊 研效看板</a>
         <button id="logoutBtn" class="ghost">退出</button>
       </div>
     </header>
@@ -66,7 +68,30 @@
           <textarea id="idea" rows="3" placeholder="例如：一个帮团队管理每日饮水与目标打卡的小工具，带统计图表"></textarea>
           <div class="row">
             <button id="genBtn" class="primary">⚡ 生成应用</button>
+            <select id="modelSel" class="model-sel" title="选择生成使用的模型（免费优先）"></select>
             <span class="tip" id="genTip">PM → 架构 → 工程 → 评审，四步成应用</span>
+          </div>
+          <div id="templates" class="templates"></div>
+        </div>
+
+        <div class="phase-card glass">
+          <div class="card-head"><span>🧭 生成流程</span><span id="phaseStatus" class="status">待开始</span></div>
+          <div id="phasebar" class="phases">
+            <div class="phase" data-phase="PM"><span class="pdot">1</span><span class="plabel">需求</span><small>Emma</small></div>
+            <div class="phase" data-phase="Architect"><span class="pdot">2</span><span class="plabel">架构</span><small>Bob</small></div>
+            <div class="phase" data-phase="Engineer"><span class="pdot">3</span><span class="plabel">工程</span><small>Alex</small></div>
+            <div class="phase" data-phase="Reviewer"><span class="pdot">4</span><span class="plabel">评审</span><small>Mike</small></div>
+            <div class="phase" data-phase="done"><span class="pdot">✓</span><span class="plabel">完成</span></div>
+          </div>
+        </div>
+
+        <div class="team-card glass">
+          <div class="card-head"><span>🤖 AI 团队</span><span class="tip">多智能体协作</span></div>
+          <div id="team" class="team">
+            <div class="member" data-agent="PM"><span class="mic">📋</span><b>Emma</b><small>产品经理 · 需求规格</small></div>
+            <div class="member" data-agent="Architect"><span class="mic">🏗️</span><b>Bob</b><small>架构师 · 系统设计</small></div>
+            <div class="member" data-agent="Engineer"><span class="mic">⚙️</span><b>Alex</b><small>工程师 · 构建应用</small></div>
+            <div class="member" data-agent="Reviewer"><span class="mic">🔍</span><b>Mike</b><small>评审 · 质量把关</small></div>
           </div>
         </div>
 
@@ -86,16 +111,27 @@
       <section class="preview-pane">
         <div class="preview-card glass">
           <div class="card-head">
-            <span>📱 实时预览</span>
+            <span>📱 实时预览 <span id="secBadge" class="sec-badge hidden"></span></span>
             <div class="prev-actions">
-              <button id="exportBtn" class="ghost sm">导出 HTML</button>
+              <div class="seg" id="devSeg">
+                <button class="seg-btn on" data-dev="desktop">桌面</button>
+                <button class="seg-btn" data-dev="tablet">平板</button>
+                <button class="seg-btn" data-dev="mobile">手机</button>
+              </div>
+              <button id="rollbackBtn" class="ghost sm">↩ 回滚</button>
+              <button id="srcBtn" class="ghost sm">源码</button>
+              <button id="copyBtn" class="ghost sm">复制</button>
+              <button id="exportBtn" class="ghost sm">导出</button>
               <button id="reloadBtn" class="ghost sm">刷新</button>
             </div>
           </div>
           <div class="frame-wrap">
-            <iframe id="preview" title="preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+            <div id="deviceFrame" class="device desktop">
+              <iframe id="preview" title="preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+            </div>
             <div id="frameEmpty" class="frame-empty">生成后，这里会出现你的应用 👀</div>
           </div>
+          <div id="srcPanel" class="src-panel hidden"><pre id="srcCode"></pre></div>
         </div>
 
         <div class="refine-card glass">
@@ -104,6 +140,11 @@
           <div class="chat-input">
             <input id="refineInput" placeholder="例如：把主色调改成绿色，加一个欢迎标语">
             <button id="refineBtn" class="primary sm">发送</button>
+          </div>
+          <div class="fb-row">
+            <span class="tip">这个版本质量如何？</span>
+            <button id="fbUp" class="ghost sm">👍 不错</button>
+            <button id="fbDown" class="ghost sm">👎 待改进</button>
           </div>
         </div>
       </section>

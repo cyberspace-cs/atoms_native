@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const state = { token: localStorage.getItem("an_token") || "", user: null, current: null, currentTitle: "", models: [] };
+  const state = { token: localStorage.getItem("an_token") || "", user: null, current: null, currentTitle: "", models: [], code: "", versionId: null, securityScore: null };
 
   // ---------- helpers ----------
   function authHeader() { return state.token ? { Authorization: "Bearer " + state.token } : {}; }
@@ -25,7 +25,44 @@
     const s = $("streamStatus");
     if (s) { s.textContent = b ? "工作中…" : "空闲"; s.classList.toggle("busy", b); }
   }
-  function resetStream() { $("stream").innerHTML = ""; agentCards = {}; }
+  function resetStream() { $("stream").innerHTML = ""; agentCards = {}; specCard = null; resetPhases(); const b = $("secBadge"); if (b) b.classList.add("hidden"); state.versionId = null; state.securityScore = null; }
+  function updateSecurityBadge(score) {
+    const b = $("secBadge"); if (!b) return;
+    b.classList.remove("hidden", "good", "warn", "bad");
+    b.textContent = "🔐 安全 " + score;
+    b.classList.add(score >= 80 ? "good" : score >= 60 ? "warn" : "bad");
+  }
+
+  // ---------- phase / team / spec helpers ----------
+  const PHASE_ORDER = ["PM", "Architect", "Engineer", "Reviewer", "done"];
+  const PHASE_LABELS = ["需求分析", "架构设计", "工程实现", "代码评审", "完成"];
+  function resetPhases() {
+    document.querySelectorAll(".phase").forEach((el) => el.classList.remove("active", "done"));
+    const st = $("phaseStatus"); if (st) st.textContent = "待开始";
+  }
+  function markPhase(agent) {
+    const idx = PHASE_ORDER.indexOf(agent);
+    if (idx < 0) return;
+    document.querySelectorAll(".phase").forEach((el) => {
+      const i = PHASE_ORDER.indexOf(el.dataset.phase);
+      el.classList.toggle("active", i === idx);
+      el.classList.toggle("done", i < idx);
+    });
+    const st = $("phaseStatus");
+    if (st) st.textContent = agent === "done" ? "已完成" : PHASE_LABELS[idx];
+  }
+  function highlightTeam(agent) {
+    document.querySelectorAll(".team .member").forEach((el) =>
+      el.classList.toggle("active", !!agent && el.dataset.agent === agent));
+  }
+  function ensureSpecCard() {
+    if (specCard) return specCard;
+    specCard = document.createElement("div");
+    specCard.className = "agent spec running";
+    specCard.innerHTML = `<div class="head"><span class="ic">📋</span><span>产品规格 · Emma</span><span class="dot"></span></div><div class="body"></div>`;
+    $("stream").appendChild(specCard);
+    return specCard;
+  }
 
   // ---------- SSE ----------
   async function streamPost(url, body, onEvent) {
@@ -53,6 +90,7 @@
 
   // ---------- agent stream rendering ----------
   let agentCards = {};
+  let specCard = null;
   function pushAgent(ev) {
     const key = ev.label || ev.agent;
     const stream = $("stream");
@@ -92,6 +130,7 @@
     const f = $("preview");
     if (!code) return;
     f.srcdoc = injectShim(code);
+    state.code = code;
     $("frameEmpty").style.display = "none";
   }
 
@@ -99,14 +138,45 @@
   function onEvent(ev) {
     switch (ev.type) {
       case "system": addNote(ev.message, "⚠️"); break;
-      case "spec": addNote("已确定规格，开始并行生成候选", "📐"); break;
-      case "agent_start": pushAgent(ev); break;
-      case "agent_output": appendAgent(ev); break;
+      case "spec":
+        addNote("已确定规格，开始并行生成候选", "📐");
+        markPhase("PM"); markPhase("Architect");
+        break;
+      case "agent_start":
+        if (ev.agent === "PM") ensureSpecCard();
+        else pushAgent(ev);
+        markPhase(ev.agent); highlightTeam(ev.agent);
+        break;
+      case "agent_output":
+        if (ev.agent === "PM") {
+          const c = ensureSpecCard(); c.classList.remove("running");
+          c.querySelector(".body").textContent += ev.output;
+        } else {
+          if (ev.agent === "Reviewer") markPhase("Reviewer");
+          appendAgent(ev);
+        }
+        break;
       case "app_code":
         if (ev.code) setPreview(ev.code);
         break;
-      case "race_done": addNote("Race 完成，最优模型：" + (ev.winner || "?"), "🏁"); break;
-      case "done": onDone(ev); break;
+      case "security":
+        if (typeof ev.score === "number") {
+          state.securityScore = ev.score;
+          updateSecurityBadge(ev.score);
+          const findings = (ev.findings || []).map((f) => "• [" + f.severity + "] " + f.category).join("<br>");
+          addNote("🔐 安全扫描得分 <b>" + ev.score + "/100</b>" + (findings ? "<br>" + findings : " · 未发现高危问题"), "🛡️");
+        }
+        break;
+      case "race_done":
+        addNote("Race 完成，最优模型：" + (ev.winner || "?"), "🏁");
+        markPhase("done"); highlightTeam(null);
+        break;
+      case "done":
+        markPhase("done"); highlightTeam(null);
+        if (typeof ev.security === "number") { state.securityScore = ev.security; updateSecurityBadge(ev.security); }
+        if (ev.version_id) state.versionId = ev.version_id;
+        onDone(ev);
+        break;
       case "error": addNote("出错：" + ev.message, "❌"); break;
     }
   }
@@ -119,6 +189,7 @@
       const d = await api("GET", "/projects/" + id);
       state.current = id;
       state.currentTitle = d.project.title;
+      if (d.project.current_version) state.versionId = d.project.current_version;
       setPreview(d.current_code || "");
       renderMessages(d.messages || []);
       highlightGallery(id);
@@ -131,9 +202,17 @@
     try {
       const d = await api("GET", "/projects");
       const g = $("gallery"); g.innerHTML = "";
-      (d.projects || []).forEach((p) => {
+      const list = d.projects || [];
+      if (!list.length) {
+        const e = document.createElement("div");
+        e.className = "empty";
+        e.innerHTML = "还没有项目 ✨<br>在上方描述一个想法，点击「生成应用」开始。";
+        g.appendChild(e);
+      }
+      list.forEach((p) => {
         const el = document.createElement("div");
         el.className = "proj" + (p.id === state.current ? " active" : "");
+        el.dataset.id = p.id;
         el.innerHTML = `<span class="del" data-del="${p.id}">✕</span><div class="t">${esc(p.title)}</div><div class="m">${esc(p.idea)}</div>`;
         el.onclick = (e) => { if (e.target.dataset.del) return; openProject(p.id); };
         el.querySelector(".del").onclick = (e) => { e.stopPropagation(); delProject(p.id); };
@@ -142,13 +221,14 @@
     } catch (e) { toast("加载项目失败"); }
   }
   function highlightGallery(id) {
-    document.querySelectorAll(".proj").forEach((el) => el.classList.toggle("active", false));
-    // re-render will handle active state
+    document.querySelectorAll(".proj").forEach((el) =>
+      el.classList.toggle("active", el.dataset.id === id));
   }
   async function openProject(id) {
     try {
       const d = await api("GET", "/projects/" + id);
       state.current = id; state.currentTitle = d.project.title;
+      const b = $("secBadge"); if (b) b.classList.add("hidden"); state.securityScore = null;
       setPreview(d.current_code || "");
       renderMessages(d.messages || []);
       loadProjects();
@@ -182,7 +262,7 @@
     try { proj = await api("POST", "/projects", { idea, title: idea.slice(0, 30) }); }
     catch (e) { toast("创建项目失败：" + e.message); setBusy(false); return; }
     state.current = proj.project.id; state.currentTitle = proj.project.title;
-    try { await streamPost("./api/generate", { project_id: proj.project.id }, onEvent); }
+    try { await streamPost("./api/generate", { project_id: proj.project.id, model: $("modelSel").value || null }, onEvent); }
     catch (e) { toast("生成失败：" + e.message); setBusy(false); }
   }
   async function doRefine() {
@@ -191,7 +271,7 @@
     if (!state.current) { toast("请先生成或打开一个项目"); return; }
     setBusy(true); resetStream();
     try {
-      await streamPost("./api/refine", { project_id: state.current, message: msg }, onEvent);
+      await streamPost("./api/refine", { project_id: state.current, message: msg, model: $("modelSel").value || null }, onEvent);
       $("refineInput").value = "";
     } catch (e) { toast("精修失败：" + e.message); setBusy(false); }
   }
@@ -214,7 +294,63 @@
       a.click();
     } catch (e) { toast("导出失败"); }
   }
+  async function doCopy() {
+    if (!state.code) { toast("还没有可复制的源码"); return; }
+    try { await navigator.clipboard.writeText(state.code); toast("已复制 HTML 到剪贴板"); }
+    catch (e) {
+      const ta = document.createElement("textarea"); ta.value = state.code; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); toast("已复制 HTML 到剪贴板"); }
+      catch (_) { toast("复制失败，请用导出下载"); }
+      document.body.removeChild(ta);
+    }
+  }
+  function toggleSrc() {
+    const p = $("srcPanel");
+    if (!state.code) { toast("还没有可查看的源码"); return; }
+    if (p.classList.contains("hidden")) { $("srcCode").textContent = state.code; p.classList.remove("hidden"); $("srcBtn").textContent = "隐藏源码"; }
+    else { p.classList.add("hidden"); $("srcBtn").textContent = "源码"; }
+  }
+  const TEMPLATES = [
+    { t: "落地页", i: "一个现代感的 SaaS 产品落地页，含 Hero、功能特性、价格方案与行动号召" },
+    { t: "待办清单", i: "一个支持增删改、完成状态切换与本地保存的待办事项应用" },
+    { t: "小游戏", i: "一个用方向键控制、计分与最高分记录的网页小游戏" },
+    { t: "作品集", i: "一个个人作品集主页，含头像、简介、项目卡片与联系方式" },
+    { t: "打卡工具", i: "一个团队每日饮水/目标打卡小工具，带统计图表与本地记录" },
+    { t: "问卷表单", i: "一个多题型问卷表单，提交后显示结果并可导出本地数据" },
+    { t: "博客", i: "一个极简博客，支持发布/编辑文章并本地持久化" },
+    { t: "数据仪表盘", i: "一个可视化数据仪表盘，含卡片指标与图表（用 chart.js）" },
+  ];
+  function renderTemplates() {
+    const c = $("templates"); if (!c) return;
+    TEMPLATES.forEach((tp) => {
+      const el = document.createElement("span");
+      el.className = "chip"; el.textContent = tp.t;
+      el.onclick = () => { $("idea").value = tp.i; $("idea").focus(); };
+      c.appendChild(el);
+    });
+  }
+
   function doReload() { if (state.current) afterUpdate(state.current); }
+
+  async function doRollback() {
+    if (!state.current) { toast("请先生成或打开一个项目"); return; }
+    if (!confirm("回滚到上一版本？（当前版本会被保留，仅切换预览版本）")) return;
+    try {
+      const r = await api("POST", "/projects/" + state.current + "/rollback", {});
+      toast("已回滚到版本 " + r.version_id);
+      state.versionId = r.version_id;
+      await afterUpdate(state.current);
+    } catch (e) { toast("回滚失败：" + e.message); }
+  }
+  async function doFeedback(rating) {
+    if (!state.current) { toast("请先生成或打开一个项目"); return; }
+    if (!state.versionId) { toast("暂无可评价版本"); return; }
+    try {
+      await api("POST", "/feedback", { project_id: state.current, version_id: state.versionId, rating });
+      toast(rating > 0 ? "感谢反馈 👍" : "感谢反馈，我们会改进 👎");
+    } catch (e) { toast("反馈失败：" + e.message); }
+  }
 
   // ---------- auth ----------
   let authTab = "login";
@@ -247,13 +383,30 @@
       const badge = $("modeBadge");
       badge.textContent = d.mock ? "离线模板模式" : "真实大模型";
       badge.style.color = d.mock ? "var(--amber)" : "var(--cyan)";
-      const list = d.available && d.available.length ? d.available : ["deepseek"];
-      state.models = list.map((m, i) => ({ id: m, on: i < Math.min(2, list.length) }));
+      const choices = (d.choices && d.choices.length) ? d.choices : [{ id: "deepseek", label: "DeepSeek" }];
+      const sel = $("modelSel");
+      sel.innerHTML = "";
+      choices.forEach((c) => {
+        const o = document.createElement("option");
+        o.value = c.id;
+        o.textContent = c.label + (c.free ? " · 免费" : "");
+        sel.appendChild(o);
+      });
+      // Prefer the working direct-DeepSeek option as the default selection so a
+      // plain "生成应用" click produces a real app; OpenRouter models (which may
+      // be account-gated) stay selectable but aren't the default.
+      const hasDirect = choices.some((c) => c.id === "deepseek");
+      if (hasDirect) sel.value = "deepseek";
+      // race model list (toggle chips) — also from choices
+      state.models = choices.map((c, i) => ({
+        id: c.id, label: c.label,
+        on: hasDirect ? (c.id === "deepseek") : (i < Math.min(2, choices.length)),
+      }));
       const ml = $("modelList"); ml.innerHTML = "";
       state.models.forEach((m) => {
         const c = document.createElement("span");
         c.className = "model-chip" + (m.on ? " on" : "");
-        c.textContent = m.id;
+        c.textContent = m.label;
         c.onclick = () => { m.on = !m.on; c.classList.toggle("on", m.on); };
         ml.appendChild(c);
       });
@@ -275,9 +428,20 @@
     $("raceBtn").onclick = doRace;
     $("refineBtn").onclick = doRefine;
     $("refineInput").addEventListener("keydown", (e) => { if (e.key === "Enter") doRefine(); });
+    $("rollbackBtn").onclick = doRollback;
+    $("fbUp").onclick = () => doFeedback(1);
+    $("fbDown").onclick = () => doFeedback(-1);
     $("exportBtn").onclick = doExport;
     $("reloadBtn").onclick = doReload;
-    $("newBtn").onclick = () => { state.current = null; $("idea").value = ""; $("idea").focus(); resetStream(); setPreview(""); $("chat").innerHTML = ""; document.querySelectorAll(".proj").forEach((e) => e.classList.remove("active")); };
+    $("copyBtn").onclick = doCopy;
+    $("srcBtn").onclick = toggleSrc;
+    document.querySelectorAll("#devSeg .seg-btn").forEach((b) => b.onclick = () => {
+      document.querySelectorAll("#devSeg .seg-btn").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      $("deviceFrame").className = "device " + b.dataset.dev;
+    });
+    renderTemplates();
+    $("newBtn").onclick = () => { state.current = null; state.code = ""; $("idea").value = ""; $("idea").focus(); resetStream(); setPreview(""); $("frameEmpty").style.display = ""; $("chat").innerHTML = ""; $("srcPanel").classList.add("hidden"); $("srcBtn").textContent = "源码"; document.querySelectorAll(".proj").forEach((e) => e.classList.remove("active")); };
 
     if (state.token) {
       api("GET", "/me").then((r) => { state.user = r.user; enterApp(); })

@@ -1,5 +1,10 @@
-fastapi
-uvicorn[standard]
-httpx
-python-multipart
-pydantic
+# Atoms_Native backend dependencies (Python 3.13 verified)
+fastapi==0.139.2
+uvicorn[standard]==0.51.0
+httpx==0.28.1
+pydantic==2.13.4
+# 可选（缺少时自动降级，不影响主流程）：
+#   redis    —— 分布式限流/并发守卫（server/ratelimit.py），缺失则进程内降级
+#   opentelemetry-api / opentelemetry-sdk —— 追踪（server/observability.py），缺失则 no-op
+redis>=5.0.0
+
