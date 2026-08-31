@@ -39,8 +39,9 @@ REV_SYSTEM = (
     "\"patch_instructions\":\"若需修复的简短指引\"}"
 )
 FIX_SYSTEM = (
-    "你是 Alex，全栈工程师 AI。按修复指引修改下方【完整】单文件 HTML 并返回修改后的完整文件"
-    "（以 <!DOCTYPE html> 开头）。不要解释。"
+    "你是 Alex，全栈工程师 AI。按修复指引修改下方【完整】单文件 HTML。\n"
+    "必须返回【完整的整个文件】，而不是改动片段、diff 或说明。\n"
+    "回复的第一个字符必须是 <!DOCTYPE html>，最后一个字符必须是 </html>。不要任何解释。"
 )
 
 
@@ -55,6 +56,40 @@ def _strip_fences(t: str) -> str:
     if s.rstrip().endswith("```"):
         s = s.rstrip()[:-3].rstrip()
     return s.strip()
+
+
+def _extract_html(t: str) -> str:
+    """Strip fences AND any chatty prose the model wraps around the HTML.
+
+    Models often reply with "Here is the file..." + a partial/odd fence, so we
+    additionally slice from the first <!DOCTYPE (or <html) to the last </html>.
+    """
+    s = _strip_fences(t)
+    low = s.lower()
+    if "<!doctype" not in low and "<html" not in low:
+        return s
+    i = low.find("<!doctype")
+    if i < 0:
+        i = low.find("<html")
+    if i < 0:
+        return s
+    body = s[i:]
+    j = body.lower().rfind("</html>")
+    if j >= 0:
+        body = body[: j + len("</html>")]
+    body = body.rstrip()
+    if body.endswith("```"):
+        body = body[:-3].rstrip()
+    return body
+
+
+def _valid_html(s: str, min_len: int = 500) -> bool:
+    """Guard against models returning a fragment/diff instead of a full file."""
+    if not s:
+        return False
+    low = s.lower().lstrip()
+    has_open = low.startswith("<!doctype") or "<html" in low
+    return has_open and "</html>" in low and len(s) >= min_len
 
 
 def _extract_json(s: str):
@@ -188,13 +223,15 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
         else:
             ctx = f"SPEC:\n{spec}\n\nARCH:\n{arch}\n\nCURRENT CODE:\n{refine_code}\n\nUSER REFINEMENT REQUEST:\n{refine_msg}"
             c, _ = chat(model, [{"role": "system", "content": REFINE_SYSTEM}, {"role": "user", "content": ctx}], max_tokens=6000)
-            code = _strip_fences(c) if c else refine_code
+            cand = _extract_html(c) if c else ""
+            code = cand if _valid_html(cand) else refine_code
     else:
         if mock:
             code = _mock_app(idea)
         else:
             c, _ = chat(model, [{"role": "system", "content": ENG_SYSTEM}, {"role": "user", "content": f"SPEC:\n{spec}\n\nARCH:\n{arch}"}], max_tokens=6000)
-            code = _strip_fences(c) if c else _mock_app(idea)
+            cand = _extract_html(c) if c else ""
+            code = cand if _valid_html(cand) else _mock_app(idea)
     yield {"type": "agent_output", "agent": "Engineer", "output": code[:1800]}
     yield {"type": "app_code", "code": code}
 
@@ -217,8 +254,13 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
         patch = (_extract_json(review_text) or {}).get("patch_instructions", "")
         c2, _ = chat(model, [{"role": "system", "content": FIX_SYSTEM}, {"role": "user", "content": f"Fix instructions: {patch}\n\nCURRENT CODE:\n{code}"}], max_tokens=6000)
         if c2:
-            code = _strip_fences(c2)
-            yield {"type": "app_code", "code": code}
-            yield {"type": "agent_output", "agent": "Engineer", "output": code[:1800]}
+            cand = _extract_html(c2)
+            if _valid_html(cand):
+                code = cand
+                yield {"type": "app_code", "code": code}
+                yield {"type": "agent_output", "agent": "Engineer", "output": code[:1800]}
+            else:
+                yield {"type": "agent_output", "agent": "Engineer",
+                       "output": "（修复返回内容不是完整 HTML，已保留修复前的版本）"}
 
     return {"spec": spec, "arch": arch, "code": code, "model": model, "mock": mock, "verdict": verdict}

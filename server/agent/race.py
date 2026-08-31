@@ -7,7 +7,8 @@ import concurrent.futures as cf
 
 from agent.llm import chat, provider_available, LLM_PROVIDER, normalize_model
 from agent.pipeline import (
-    PM_SYSTEM, ARCH_SYSTEM, ENG_SYSTEM, REV_SYSTEM, _strip_fences, _extract_json,
+    PM_SYSTEM, ARCH_SYSTEM, ENG_SYSTEM, REV_SYSTEM, _extract_html, _extract_json,
+    _valid_html,
     _mock_spec, _mock_arch, _mock_app,
 )
 
@@ -30,7 +31,8 @@ def _gen_one(model: str, idea: str, spec: str, arch: str):
     if provider_available(model):
         c, _ = chat(model, [{"role": "system", "content": ENG_SYSTEM},
                              {"role": "user", "content": f"SPEC:\n{spec}\n\nARCH:\n{arch}"}], max_tokens=5000)
-        code = _strip_fences(c) if c else _mock_app(idea)
+        cand = _extract_html(c) if c else ""
+        code = cand if _valid_html(cand) else _mock_app(idea)
     else:
         code = _mock_app(idea)
     events.append(("agent_start", {"agent": "Engineer", "label": f"工程师 · {model}", "icon": "⚙️"}))
