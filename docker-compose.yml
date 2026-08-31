@@ -1,0 +1,19 @@
+services:
+  atoms-native:
+    build: .
+    container_name: atoms-native
+    restart: unless-stopped
+    ports:
+      - "8088:8000"
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-deepseek}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_COMPAT_BASE_URL=${OPENAI_COMPAT_BASE_URL}
+      - OPENAI_COMPAT_API_KEY=${OPENAI_COMPAT_API_KEY}
+      - OPENAI_COMPAT_MODEL=${OPENAI_COMPAT_MODEL}
+      - DB_PATH=/data/atoms_native.db
+    volumes:
+      - atoms_data:/data
+
+volumes:
+  atoms_data:

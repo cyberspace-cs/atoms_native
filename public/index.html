@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atoms Native · AI 应用生成平台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="app">
+  <!-- ============ AUTH ============ -->
+  <section id="auth" class="auth">
+    <div class="auth-card glass">
+      <div class="brand">
+        <div class="logo">⚛</div>
+        <div>
+          <h1>Atoms <span>Native</span></h1>
+          <p>用一句话，让 AI 智能体团队为你造出一个可运行的应用</p>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="login">登录</button>
+        <button class="tab" data-tab="register">注册</button>
+      </div>
+      <form id="authForm" autocomplete="off">
+        <input id="username" placeholder="用户名" autocomplete="off">
+        <input id="password" type="password" placeholder="密码">
+        <button class="primary" type="submit" id="authBtn">进入工作台</button>
+        <div id="authErr" class="err"></div>
+      </form>
+      <div class="hint">演示账号可直接注册体验 · 生成能力由 DeepSeek 等大模型驱动</div>
+    </div>
+    <div class="auth-bg"></div>
+  </section>
+
+  <!-- ============ MAIN ============ -->
+  <div id="main" class="hidden">
+    <header class="topbar glass">
+      <div class="brand sm">
+        <div class="logo sm">⚛</div>
+        <span>Atoms <b>Native</b></span>
+        <span id="modeBadge" class="badge">·</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="user">
+        <span id="userName" class="uname"></span>
+        <button id="logoutBtn" class="ghost">退出</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- sidebar: gallery -->
+      <aside class="sidebar glass">
+        <div class="side-head">
+          <span>我的项目</span>
+          <button id="newBtn" class="ghost sm">+ 新建</button>
+        </div>
+        <div id="gallery" class="gallery"></div>
+      </aside>
+
+      <!-- studio -->
+      <section class="studio">
+        <div class="idea-card glass">
+          <label>描述你的想法，让智能体团队开始工作 🚀</label>
+          <textarea id="idea" rows="3" placeholder="例如：一个帮团队管理每日饮水与目标打卡的小工具，带统计图表"></textarea>
+          <div class="row">
+            <button id="genBtn" class="primary">⚡ 生成应用</button>
+            <span class="tip" id="genTip">PM → 架构 → 工程 → 评审，四步成应用</span>
+          </div>
+        </div>
+
+        <div class="stream-card glass">
+          <div class="card-head"><span>🧠 智能体工作台</span><span id="streamStatus" class="status">空闲</span></div>
+          <div id="stream" class="stream"></div>
+        </div>
+
+        <div class="race-card glass">
+          <div class="card-head"><span>🏁 Race Mode · 多模型择优</span></div>
+          <div id="modelList" class="models"></div>
+          <button id="raceBtn" class="secondary">并行跑多个模型，评审打分选最优</button>
+        </div>
+      </section>
+
+      <!-- preview + refine -->
+      <section class="preview-pane">
+        <div class="preview-card glass">
+          <div class="card-head">
+            <span>📱 实时预览</span>
+            <div class="prev-actions">
+              <button id="exportBtn" class="ghost sm">导出 HTML</button>
+              <button id="reloadBtn" class="ghost sm">刷新</button>
+            </div>
+          </div>
+          <div class="frame-wrap">
+            <iframe id="preview" title="preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+            <div id="frameEmpty" class="frame-empty">生成后，这里会出现你的应用 👀</div>
+          </div>
+        </div>
+
+        <div class="refine-card glass">
+          <div class="card-head"><span>💬 对话式精修</span></div>
+          <div id="chat" class="chat"></div>
+          <div class="chat-input">
+            <input id="refineInput" placeholder="例如：把主色调改成绿色，加一个欢迎标语">
+            <button id="refineBtn" class="primary sm">发送</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<script src="./app.js"></script>
+</body>
+</html>

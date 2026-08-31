@@ -1,0 +1,288 @@
+/* Atoms Native — frontend logic (vanilla JS, no build step). */
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const state = { token: localStorage.getItem("an_token") || "", user: null, current: null, currentTitle: "", models: [] };
+
+  // ---------- helpers ----------
+  function authHeader() { return state.token ? { Authorization: "Bearer " + state.token } : {}; }
+  async function api(method, path, body) {
+    const res = await fetch("./api" + path, {
+      method,
+      headers: { "Content-Type": "application/json", ...authHeader() },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) { let m = ""; try { m = await res.text(); } catch (e) {} throw new Error(m || res.status); }
+    return res.json();
+  }
+  let toastTimer;
+  function toast(msg, kind) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+  function setBusy(b) {
+    ["genBtn", "raceBtn", "refineBtn"].forEach((id) => { const el = $(id); if (el) el.disabled = b; });
+    const s = $("streamStatus");
+    if (s) { s.textContent = b ? "工作中…" : "空闲"; s.classList.toggle("busy", b); }
+  }
+  function resetStream() { $("stream").innerHTML = ""; agentCards = {}; }
+
+  // ---------- SSE ----------
+  async function streamPost(url, body, onEvent) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeader() },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { let m = ""; try { m = await res.text(); } catch (e) {} throw new Error(m || res.status); }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+        if (line) { try { onEvent(JSON.parse(line.slice(6))); } catch (e) {} }
+      }
+    }
+  }
+
+  // ---------- agent stream rendering ----------
+  let agentCards = {};
+  function pushAgent(ev) {
+    const key = ev.label || ev.agent;
+    const stream = $("stream");
+    let card = agentCards[key];
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "agent running";
+      card.innerHTML = `<div class="head"><span class="ic">${ev.icon || "🤖"}</span><span>${ev.label || ev.agent}</span><span class="dot"></span></div><div class="body"></div>`;
+      stream.appendChild(card);
+      agentCards[key] = card;
+    }
+    return card;
+  }
+  function appendAgent(ev) {
+    const key = ev.label || ev.agent;
+    const card = agentCards[key]; if (!card) return;
+    card.classList.remove("running");
+    const body = card.querySelector(".body");
+    if (ev.output) body.textContent += (body.textContent ? "\n\n" : "") + ev.output;
+    body.scrollTop = body.scrollHeight;
+  }
+  function addNote(text, icon) {
+    const stream = $("stream");
+    const d = document.createElement("div");
+    d.className = "agent";
+    d.innerHTML = `<div class="head"><span class="ic">${icon || "ℹ️"}</span><span>${text}</span></div>`;
+    stream.appendChild(d);
+  }
+
+  // ---------- preview ----------
+  function injectShim(html) {
+    const shim = '<script>(function(){try{if(window.localStorage)return;}catch(e){}var m={};window.localStorage={getItem:function(k){return k in m?m[k]:null;},setItem:function(k,v){m[k]=String(v);},removeItem:function(k){delete m[k];},clear:function(){m={};}};})();<\/script>';
+    if (html.indexOf("<head") >= 0) return html.replace("<head>", "<head>" + shim);
+    return shim + html;
+  }
+  function setPreview(code) {
+    const f = $("preview");
+    if (!code) return;
+    f.srcdoc = injectShim(code);
+    $("frameEmpty").style.display = "none";
+  }
+
+  // ---------- event router ----------
+  function onEvent(ev) {
+    switch (ev.type) {
+      case "system": addNote(ev.message, "⚠️"); break;
+      case "spec": addNote("已确定规格，开始并行生成候选", "📐"); break;
+      case "agent_start": pushAgent(ev); break;
+      case "agent_output": appendAgent(ev); break;
+      case "app_code":
+        if (ev.code) setPreview(ev.code);
+        break;
+      case "race_done": addNote("Race 完成，最优模型：" + (ev.winner || "?"), "🏁"); break;
+      case "done": onDone(ev); break;
+      case "error": addNote("出错：" + ev.message, "❌"); break;
+    }
+  }
+  async function onDone(ev) {
+    setBusy(false);
+    if (ev.project_id) { state.current = ev.project_id; await afterUpdate(ev.project_id); }
+  }
+  async function afterUpdate(id) {
+    try {
+      const d = await api("GET", "/projects/" + id);
+      state.current = id;
+      state.currentTitle = d.project.title;
+      setPreview(d.current_code || "");
+      renderMessages(d.messages || []);
+      highlightGallery(id);
+    } catch (e) {}
+    await loadProjects();
+  }
+
+  // ---------- gallery ----------
+  async function loadProjects() {
+    try {
+      const d = await api("GET", "/projects");
+      const g = $("gallery"); g.innerHTML = "";
+      (d.projects || []).forEach((p) => {
+        const el = document.createElement("div");
+        el.className = "proj" + (p.id === state.current ? " active" : "");
+        el.innerHTML = `<span class="del" data-del="${p.id}">✕</span><div class="t">${esc(p.title)}</div><div class="m">${esc(p.idea)}</div>`;
+        el.onclick = (e) => { if (e.target.dataset.del) return; openProject(p.id); };
+        el.querySelector(".del").onclick = (e) => { e.stopPropagation(); delProject(p.id); };
+        g.appendChild(el);
+      });
+    } catch (e) { toast("加载项目失败"); }
+  }
+  function highlightGallery(id) {
+    document.querySelectorAll(".proj").forEach((el) => el.classList.toggle("active", false));
+    // re-render will handle active state
+  }
+  async function openProject(id) {
+    try {
+      const d = await api("GET", "/projects/" + id);
+      state.current = id; state.currentTitle = d.project.title;
+      setPreview(d.current_code || "");
+      renderMessages(d.messages || []);
+      loadProjects();
+      toast("已打开：" + d.project.title);
+    } catch (e) { toast("打开失败"); }
+  }
+  async function delProject(id) {
+    if (!confirm("删除该项目及其所有版本？")) return;
+    try { await api("DELETE", "/projects/" + id); if (state.current === id) { state.current = null; setPreview(""); $("chat").innerHTML = ""; } loadProjects(); toast("已删除"); }
+    catch (e) { toast("删除失败"); }
+  }
+
+  // ---------- messages ----------
+  function renderMessages(msgs) {
+    const c = $("chat"); c.innerHTML = "";
+    (msgs || []).forEach((m) => {
+      const d = document.createElement("div");
+      d.className = "msg " + (m.role === "user" ? "user" : "agent");
+      d.textContent = m.content;
+      c.appendChild(d);
+    });
+    c.scrollTop = c.scrollHeight;
+  }
+
+  // ---------- actions ----------
+  async function doGenerate() {
+    const idea = $("idea").value.trim();
+    if (!idea) { toast("先描述你的想法"); return; }
+    setBusy(true); resetStream();
+    let proj;
+    try { proj = await api("POST", "/projects", { idea, title: idea.slice(0, 30) }); }
+    catch (e) { toast("创建项目失败：" + e.message); setBusy(false); return; }
+    state.current = proj.project.id; state.currentTitle = proj.project.title;
+    try { await streamPost("./api/generate", { project_id: proj.project.id }, onEvent); }
+    catch (e) { toast("生成失败：" + e.message); setBusy(false); }
+  }
+  async function doRefine() {
+    const msg = $("refineInput").value.trim();
+    if (!msg) { toast("输入精修要求"); return; }
+    if (!state.current) { toast("请先生成或打开一个项目"); return; }
+    setBusy(true); resetStream();
+    try {
+      await streamPost("./api/refine", { project_id: state.current, message: msg }, onEvent);
+      $("refineInput").value = "";
+    } catch (e) { toast("精修失败：" + e.message); setBusy(false); }
+  }
+  async function doRace() {
+    if (!state.current) { toast("请先生成或打开一个项目"); return; }
+    let models = state.models.filter((m) => m.on).map((m) => m.id);
+    if (!models.length) models = ["deepseek"];
+    setBusy(true); resetStream();
+    try { await streamPost("./api/race", { project_id: state.current, models }, onEvent); }
+    catch (e) { toast("Race 失败：" + e.message); setBusy(false); }
+  }
+  async function doExport() {
+    if (!state.current) { toast("没有可导出的项目"); return; }
+    try {
+      const res = await fetch("./api/projects/" + state.current + "/export", { headers: authHeader() });
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = (state.currentTitle || "atoms-app").replace(/\s+/g, "_") + ".html";
+      a.click();
+    } catch (e) { toast("导出失败"); }
+  }
+  function doReload() { if (state.current) afterUpdate(state.current); }
+
+  // ---------- auth ----------
+  let authTab = "login";
+  async function submitAuth(e) {
+    e.preventDefault();
+    const username = $("username").value.trim();
+    const password = $("password").value;
+    if (!username || !password) { $("authErr").textContent = "请输入用户名和密码"; return; }
+    try {
+      const path = authTab === "login" ? "/auth/login" : "/auth/register";
+      const r = await api("POST", path, { username, password });
+      state.token = r.token; state.user = r.user;
+      localStorage.setItem("an_token", r.token);
+      enterApp();
+    } catch (err) { $("authErr").textContent = err.message || "认证失败"; }
+  }
+  function logout() { state.token = ""; localStorage.removeItem("an_token"); location.reload(); }
+  async function enterApp() {
+    $("auth").classList.add("hidden");
+    $("main").classList.remove("hidden");
+    $("userName").textContent = state.user ? state.user.username : "";
+    await loadModels();
+    await loadProjects();
+  }
+
+  // ---------- models / race UI ----------
+  async function loadModels() {
+    try {
+      const d = await api("GET", "/models");
+      const badge = $("modeBadge");
+      badge.textContent = d.mock ? "离线模板模式" : "真实大模型";
+      badge.style.color = d.mock ? "var(--amber)" : "var(--cyan)";
+      const list = d.available && d.available.length ? d.available : ["deepseek"];
+      state.models = list.map((m, i) => ({ id: m, on: i < Math.min(2, list.length) }));
+      const ml = $("modelList"); ml.innerHTML = "";
+      state.models.forEach((m) => {
+        const c = document.createElement("span");
+        c.className = "model-chip" + (m.on ? " on" : "");
+        c.textContent = m.id;
+        c.onclick = () => { m.on = !m.on; c.classList.toggle("on", m.on); };
+        ml.appendChild(c);
+      });
+    } catch (e) { toast("加载模型失败"); }
+  }
+
+  function esc(s) { return (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+  // ---------- wire up ----------
+  function init() {
+    document.querySelectorAll(".tab").forEach((t) => t.onclick = () => {
+      document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+      t.classList.add("active"); authTab = t.dataset.tab;
+      $("authBtn").textContent = authTab === "login" ? "进入工作台" : "创建账号并进入";
+    });
+    $("authForm").onsubmit = submitAuth;
+    $("logoutBtn").onclick = logout;
+    $("genBtn").onclick = doGenerate;
+    $("raceBtn").onclick = doRace;
+    $("refineBtn").onclick = doRefine;
+    $("refineInput").addEventListener("keydown", (e) => { if (e.key === "Enter") doRefine(); });
+    $("exportBtn").onclick = doExport;
+    $("reloadBtn").onclick = doReload;
+    $("newBtn").onclick = () => { state.current = null; $("idea").value = ""; $("idea").focus(); resetStream(); setPreview(""); $("chat").innerHTML = ""; document.querySelectorAll(".proj").forEach((e) => e.classList.remove("active")); };
+
+    if (state.token) {
+      api("GET", "/me").then((r) => { state.user = r.user; enterApp(); })
+        .catch(() => { localStorage.removeItem("an_token"); state.token = ""; });
+    }
+  }
+  init();
+})();
