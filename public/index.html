@@ -118,13 +118,15 @@
                 <button class="seg-btn" data-dev="tablet">平板</button>
                 <button class="seg-btn" data-dev="mobile">手机</button>
               </div>
-              <button id="rollbackBtn" class="ghost sm">↩ 回滚</button>
+              <button id="rollbackBtn" class="ghost sm">🕘 版本</button>
               <button id="srcBtn" class="ghost sm">源码</button>
               <button id="copyBtn" class="ghost sm">复制</button>
               <button id="exportBtn" class="ghost sm">导出</button>
               <button id="reloadBtn" class="ghost sm">刷新</button>
             </div>
           </div>
+          <div id="versionPanel" class="ver-panel glass hidden"></div>
+          <div id="secPopover" class="sec-popover glass hidden"></div>
           <div class="frame-wrap">
             <div id="deviceFrame" class="device desktop">
               <iframe id="preview" title="preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
@@ -145,6 +147,10 @@
             <span class="tip">这个版本质量如何？</span>
             <button id="fbUp" class="ghost sm">👍 不错</button>
             <button id="fbDown" class="ghost sm">👎 待改进</button>
+          </div>
+          <div class="fb-comment-row">
+            <input id="fbComment" class="fb-comment" placeholder="补充评价或问题（可选）">
+            <span id="fbState" class="fb-state hidden">已反馈 ✓</span>
           </div>
         </div>
       </section>

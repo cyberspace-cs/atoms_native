@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const state = { token: localStorage.getItem("an_token") || "", user: null, current: null, currentTitle: "", models: [], code: "", versionId: null, securityScore: null };
+  const state = { token: localStorage.getItem("an_token") || "", user: null, current: null, currentTitle: "", models: [], code: "", versionId: null, securityScore: null, securityFindings: null, securitySummary: null, feedbackSent: false };
 
   // ---------- helpers ----------
   function authHeader() { return state.token ? { Authorization: "Bearer " + state.token } : {}; }
@@ -25,12 +25,39 @@
     const s = $("streamStatus");
     if (s) { s.textContent = b ? "工作中…" : "空闲"; s.classList.toggle("busy", b); }
   }
-  function resetStream() { $("stream").innerHTML = ""; agentCards = {}; specCard = null; resetPhases(); const b = $("secBadge"); if (b) b.classList.add("hidden"); state.versionId = null; state.securityScore = null; }
-  function updateSecurityBadge(score) {
+  function resetStream() {
+    $("stream").innerHTML = ""; agentCards = {}; specCard = null; resetPhases();
+    const b = $("secBadge"); if (b) b.classList.add("hidden");
+    const pop = $("secPopover"); if (pop) pop.classList.add("hidden");
+    state.versionId = null; state.securityScore = null; state.securityFindings = null; state.securitySummary = null;
+    resetFeedback();
+  }
+  function updateSecurityBadge(score, findings, summary) {
     const b = $("secBadge"); if (!b) return;
+    if (findings !== undefined) state.securityFindings = findings || [];
+    if (summary !== undefined) state.securitySummary = summary || "";
     b.classList.remove("hidden", "good", "warn", "bad");
     b.textContent = "🔐 安全 " + score;
     b.classList.add(score >= 80 ? "good" : score >= 60 ? "warn" : "bad");
+  }
+  function toggleSecPopover() {
+    const p = $("secPopover"); if (!p) return;
+    if (!p.classList.contains("hidden")) { p.classList.add("hidden"); return; }
+    const score = state.securityScore, f = state.securityFindings || [], s = state.securitySummary || "";
+    let html = '<div class="sec-pop-head">🔐 安全扫描 <b>' + score + "/100</b></div>";
+    if (f.length) {
+      html += '<div class="sec-pop-list">' + f.map((x) => {
+        const sev = x.severity || "info";
+        return '<div class="sec-find sev-' + sev + '"><span class="sev-dot"></span><b>[' + esc(sev) + "]</b> " +
+          esc(x.category || "") + (x.owasp ? ' <span class="sev-owasp">' + esc(x.owasp) + "</span>" : "") + "</div>";
+      }).join("") + "</div>";
+    } else {
+      html += '<div class="sec-pop-list"><div class="sec-find sev-ok">✓ 未发现高危问题</div></div>';
+    }
+    if (s) html += '<div class="sec-pop-sum">' + esc(s) + "</div>";
+    html += '<div class="sec-pop-foot">基于 OWASP LLM Top 10 2025</div>';
+    p.innerHTML = html;
+    p.classList.remove("hidden");
   }
 
   // ---------- phase / team / spec helpers ----------
@@ -162,7 +189,7 @@
       case "security":
         if (typeof ev.score === "number") {
           state.securityScore = ev.score;
-          updateSecurityBadge(ev.score);
+          updateSecurityBadge(ev.score, ev.findings, ev.summary);
           const findings = (ev.findings || []).map((f) => "• [" + f.severity + "] " + f.category).join("<br>");
           addNote("🔐 安全扫描得分 <b>" + ev.score + "/100</b>" + (findings ? "<br>" + findings : " · 未发现高危问题"), "🛡️");
         }
@@ -184,15 +211,27 @@
     setBusy(false);
     if (ev.project_id) { state.current = ev.project_id; await afterUpdate(ev.project_id); }
   }
+  async function applyProjectData(d) {
+    state.current = d.project.id;
+    state.currentTitle = d.project.title;
+    if (d.project.current_version) state.versionId = d.project.current_version;
+    const curVer = (d.versions || []).find((v) => v.id === d.project.current_version);
+    if (curVer && curVer.security_score != null) {
+      state.securityScore = curVer.security_score;
+      updateSecurityBadge(curVer.security_score);
+    } else {
+      const b = $("secBadge"); if (b) b.classList.add("hidden");
+      state.securityScore = null; state.securityFindings = null; state.securitySummary = null;
+    }
+    setPreview(d.current_code || "");
+    renderMessages(d.messages || []);
+    highlightGallery(d.project.id);
+    resetFeedback();
+  }
   async function afterUpdate(id) {
     try {
       const d = await api("GET", "/projects/" + id);
-      state.current = id;
-      state.currentTitle = d.project.title;
-      if (d.project.current_version) state.versionId = d.project.current_version;
-      setPreview(d.current_code || "");
-      renderMessages(d.messages || []);
-      highlightGallery(id);
+      await applyProjectData(d);
     } catch (e) {}
     await loadProjects();
   }
@@ -227,10 +266,7 @@
   async function openProject(id) {
     try {
       const d = await api("GET", "/projects/" + id);
-      state.current = id; state.currentTitle = d.project.title;
-      const b = $("secBadge"); if (b) b.classList.add("hidden"); state.securityScore = null;
-      setPreview(d.current_code || "");
-      renderMessages(d.messages || []);
+      await applyProjectData(d);
       loadProjects();
       toast("已打开：" + d.project.title);
     } catch (e) { toast("打开失败"); }
@@ -333,23 +369,81 @@
 
   function doReload() { if (state.current) afterUpdate(state.current); }
 
-  async function doRollback() {
+  async function toggleVersionPanel() {
+    const panel = $("versionPanel");
+    if (!panel.classList.contains("hidden")) { panel.classList.add("hidden"); return; }
     if (!state.current) { toast("请先生成或打开一个项目"); return; }
-    if (!confirm("回滚到上一版本？（当前版本会被保留，仅切换预览版本）")) return;
+    panel.classList.remove("hidden");
+    try {
+      const d = await api("GET", "/projects/" + state.current);
+      renderVersions(d);
+    } catch (e) { toast("加载版本失败"); }
+  }
+  function renderVersions(d) {
+    const panel = $("versionPanel");
+    const cur = d.project.current_version;
+    const vs = (d.versions || []).slice().reverse();
+    if (!vs.length) { panel.innerHTML = '<div class="ver-empty">暂无版本</div>'; return; }
+    panel.innerHTML =
+      '<div class="ver-head"><span>🕘 版本历史</span><button id="verClose" class="ghost sm">收起</button></div>' +
+      '<div class="ver-list">' + vs.map((v) => {
+        const s = v.security_score;
+        const sec = s != null ? '<span class="ver-sec ' + (s >= 80 ? "good" : s >= 60 ? "warn" : "bad") + '">🔐' + s + "</span>" : "";
+        const isCur = v.id === cur;
+        return '<div class="ver-item' + (isCur ? " cur" : "") + '">' +
+          '<div class="ver-meta"><b>#' + v.version_no + "</b> " + esc(v.model_used || "") + " " + sec +
+          " <small>" + esc(v.created_at || "") + "</small>" + (isCur ? ' <span class="ver-cur-tag">当前</span>' : "") + "</div>" +
+          '<div class="ver-note">' + (esc(v.note || "") || "—") + "</div>" +
+          (isCur ? "" : '<button class="ghost sm ver-restore" data-vid="' + v.id + '">恢复此版本</button>') +
+          "</div>";
+      }).join("") + "</div>" +
+      '<div class="ver-actions"><button id="verPrev" class="secondary sm">↩ 回滚到上一版本</button></div>';
+    panel.querySelector("#verClose").onclick = () => panel.classList.add("hidden");
+    panel.querySelectorAll(".ver-restore").forEach((b) => b.onclick = () => restoreVersion(parseInt(b.dataset.vid, 10)));
+    const vp = $("verPrev"); if (vp) vp.onclick = () => rollbackPrev();
+  }
+  async function restoreVersion(vid) {
+    if (!state.current) return;
+    try {
+      const r = await api("POST", "/projects/" + state.current + "/rollback", { version_id: vid });
+      toast("已恢复到版本 " + r.version_id);
+      state.versionId = r.version_id;
+      $("versionPanel").classList.add("hidden");
+      await afterUpdate(state.current);
+    } catch (e) { toast("恢复失败：" + e.message); }
+  }
+  async function rollbackPrev() {
+    if (!state.current) return;
     try {
       const r = await api("POST", "/projects/" + state.current + "/rollback", {});
       toast("已回滚到版本 " + r.version_id);
       state.versionId = r.version_id;
+      $("versionPanel").classList.add("hidden");
       await afterUpdate(state.current);
     } catch (e) { toast("回滚失败：" + e.message); }
   }
   async function doFeedback(rating) {
     if (!state.current) { toast("请先生成或打开一个项目"); return; }
     if (!state.versionId) { toast("暂无可评价版本"); return; }
+    if (state.feedbackSent) { toast("本版本已反馈过，感谢！"); return; }
+    const comment = $("fbComment").value.trim();
     try {
-      await api("POST", "/feedback", { project_id: state.current, version_id: state.versionId, rating });
+      await api("POST", "/feedback", { project_id: state.current, version_id: state.versionId, rating, comment });
+      state.feedbackSent = true;
+      if ($("fbUp")) $("fbUp").disabled = true;
+      if ($("fbDown")) $("fbDown").disabled = true;
+      if ($("fbState")) $("fbState").classList.remove("hidden");
+      if ($("fbComment")) $("fbComment").disabled = true;
       toast(rating > 0 ? "感谢反馈 👍" : "感谢反馈，我们会改进 👎");
     } catch (e) { toast("反馈失败：" + e.message); }
+  }
+  function resetFeedback() {
+    state.feedbackSent = false;
+    const up = $("fbUp"), down = $("fbDown"), st = $("fbState"), c = $("fbComment");
+    if (up) up.disabled = false;
+    if (down) down.disabled = false;
+    if (st) st.classList.add("hidden");
+    if (c) { c.value = ""; c.disabled = false; }
   }
 
   // ---------- auth ----------
@@ -428,7 +522,8 @@
     $("raceBtn").onclick = doRace;
     $("refineBtn").onclick = doRefine;
     $("refineInput").addEventListener("keydown", (e) => { if (e.key === "Enter") doRefine(); });
-    $("rollbackBtn").onclick = doRollback;
+    $("rollbackBtn").onclick = toggleVersionPanel;
+    $("secBadge").onclick = toggleSecPopover;
     $("fbUp").onclick = () => doFeedback(1);
     $("fbDown").onclick = () => doFeedback(-1);
     $("exportBtn").onclick = doExport;
