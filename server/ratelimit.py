@@ -54,17 +54,26 @@ return {allowed, tokens}
 """
 
 _redis = None
-_redis_ok = False
+_redis_dead_until = 0.0
+_REDIS_RETRY_S = 30.0
 
 
 def _get_redis():
-    """惰性获取 Redis 连接（导入时不强制依赖）。返回 (client|None)。"""
-    global _redis, _redis_ok
-    if _redis_ok:
+    """惰性获取 Redis 连接（导入时不强制依赖）。返回 client|None。
+
+    两个关键点（都是上线验证时踩出来的）：
+    - 成功后必须缓存：否则每次限流判定都会重建 client + ping，
+      白白多一次网络往返，连接池随请求数不断膨胀。
+    - 失败只「冷却」不「判死」：Redis 抖动/重启后能自动回到分布式限流，
+      避免一次失败就永久退化成进程内限流（沉默降级，且看不出来）。
+    """
+    global _redis, _redis_dead_until
+    if _redis is not None:
         return _redis
     if not REDIS_URL:
-        _redis_ok = True  # 标记为「已决定无 Redis」避免反复尝试
         return None
+    if time.time() < _redis_dead_until:
+        return None  # 冷却期内不再反复建连
     try:
         import redis  # 可选依赖
         client = redis.Redis.from_url(REDIS_URL, socket_connect_timeout=0.3,
@@ -73,7 +82,7 @@ def _get_redis():
         _redis = client
         return client
     except Exception:
-        _redis_ok = True
+        _redis_dead_until = time.time() + _REDIS_RETRY_S
         return None
 
 

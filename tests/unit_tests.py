@@ -16,7 +16,9 @@ import json
 import os
 import sys
 import tempfile
+import types
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER = os.path.join(HERE, "..", "server")
@@ -144,9 +146,8 @@ class TestAuditSOC2(unittest.TestCase):
 
 class TestRateLimit(unittest.TestCase):
     def setUp(self):
-        ratelimit._get_redis.cache_clear() if hasattr(ratelimit._get_redis, "cache_clear") else None
         ratelimit._redis = None
-        ratelimit._redis_ok = True
+        ratelimit._redis_dead_until = 0.0
         ratelimit.REDIS_URL = ""  # 强制进程内降级
         ratelimit._inproc.clear()
 
@@ -171,6 +172,55 @@ class TestRateLimit(unittest.TestCase):
         ratelimit.release(7)
         self.assertTrue(ratelimit.acquire(7))
         ratelimit.release(7)
+
+    @staticmethod
+    def _fake_redis_module(should_fail):
+        """构造一个假的 redis 模块，控制 ping 成功/失败。"""
+        state = {"n": 0, "fail": should_fail}
+
+        class _Client:
+            def ping(self):
+                if state["fail"]:
+                    raise RuntimeError("redis down")
+                return True
+
+        class _RedisStub:
+            @staticmethod
+            def from_url(url, **kw):
+                state["n"] += 1
+                return _Client()
+
+        mod = types.ModuleType("redis")
+        mod.Redis = _RedisStub
+        return mod, state
+
+    def test_redis_client_cached_after_success(self):
+        """成功后必须缓存连接：否则每次限流判定都重建 client + ping（白白多一次往返）。"""
+        mod, state = self._fake_redis_module(should_fail=False)
+        ratelimit.REDIS_URL = "redis://fake:6379/0"
+        with mock.patch.dict(sys.modules, {"redis": mod}):
+            c1 = ratelimit._get_redis()
+            c2 = ratelimit._get_redis()
+        self.assertIsNotNone(c1)
+        self.assertIs(c1, c2, "第二次应复用缓存的 client")
+        self.assertEqual(state["n"], 1, "只应建连一次")
+
+    def test_transient_redis_failure_recovers(self):
+        """失败只冷却不判死：Redis 恢复后能自动回到分布式限流（避免永久沉默降级）。"""
+        mod, state = self._fake_redis_module(should_fail=True)
+        ratelimit.REDIS_URL = "redis://fake:6379/0"
+        old_retry = ratelimit._REDIS_RETRY_S
+        ratelimit._REDIS_RETRY_S = 0.0  # 冷却 0 秒，立刻可重试
+        try:
+            with mock.patch.dict(sys.modules, {"redis": mod}):
+                self.assertIsNone(ratelimit._get_redis(), "故障时应返回 None 走降级")
+                state["fail"] = False
+                self.assertIsNotNone(
+                    ratelimit._get_redis(),
+                    "Redis 恢复后应自动重新连上，而不是永久停在进程内限流",
+                )
+        finally:
+            ratelimit._REDIS_RETRY_S = old_retry
 
 
 class TestObservability(unittest.TestCase):
