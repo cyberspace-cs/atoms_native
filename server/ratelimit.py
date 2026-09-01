@@ -134,6 +134,24 @@ def allow(tenant_id, endpoint: str, dim: str = "", cost: int = 1) -> dict:
             "remaining": remaining, "shadow": False}
 
 
+def status() -> dict:
+    """限流后端自省：让运维一眼看出是否处于降级状态。
+
+    避免「以为在跑分布式令牌桶、其实已悄悄退回进程内」的沉默降级。
+    """
+    client = _get_redis()
+    backend = "redis" if client is not None else "inproc"
+    return {
+        "mode": MODE,
+        "backend": backend,
+        "redis_url_set": bool(REDIS_URL),
+        "redis_reachable": client is not None,
+        "capacity_override": CAPACITY_OVERRIDE,
+        "endpoint_rates": {k: {"capacity": v[0], "period_s": v[1]}
+                           for k, v in ENDPOINT_RATES.items()},
+    }
+
+
 # ---------------- 并发守卫（跨进程单任务互斥） ----------------
 _inproc_active: set = set()
 

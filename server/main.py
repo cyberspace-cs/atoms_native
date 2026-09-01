@@ -471,6 +471,8 @@ def metrics(user=Depends(require_user)):
         "recent_runs": [dict(r) for r in recent],
         "audit_alerts": alerts,
         "observability": obs.summary(),
+        # 限流后端自省：redis / inproc 一眼可见，杜绝沉默降级
+        "ratelimit": rl.status(),
     }
 
 

@@ -132,6 +132,9 @@ def summary() -> dict:
     total_tok = sum(toks)
     total_s = sum(lats) / 1000.0 or 0
     out = {
+        # 可观测性自身是否满血：OTel 未安装时为 False（span 是 no-op），
+        # 避免「以为在埋点、其实什么都没记」的沉默降级。
+        "otel_enabled": _try_otel() is not None,
         "n_runs": len(_runs),
         "latency_p50_ms": _percentile(lats, 50),
         "latency_p95_ms": _percentile(lats, 95),

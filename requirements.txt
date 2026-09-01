@@ -7,4 +7,8 @@ pydantic==2.13.4
 #   redis    —— 分布式限流/并发守卫（server/ratelimit.py），缺失则进程内降级
 #   opentelemetry-api / opentelemetry-sdk —— 追踪（server/observability.py），缺失则 no-op
 redis>=5.0.0
+# 版本坑：必须固定 1.21.0。opentelemetry.semconv.trace 在更高版本已移除，
+# 装新版会让 observability._try_otel() 因 ImportError 静默降级成 no-op span（表面无异常）。
+opentelemetry-api==1.21.0
+opentelemetry-sdk==1.21.0
 
