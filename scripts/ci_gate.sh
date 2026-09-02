@@ -5,6 +5,11 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
+# Python 解释器：优先用 server/venv（fastapi 等依赖只在 venv 里），
+# 退化到 PATH 上的 python3（本地无 venv 的场景）。
+VENV_PY="$(pwd)/server/venv/bin/python"
+if [ -x "$VENV_PY" ]; then PY="$VENV_PY"; else PY="python3"; fi
+
 PASS=0; FAIL=0
 step() {
   local name="$1"; shift
@@ -18,9 +23,9 @@ step() {
   fi
 }
 
-step "1/6 语法编译 (compileall)" python3 -m compileall -q server tests scripts
-step "2/6 单元测试" python3 tests/unit_tests.py
-step "3/6 门禁自测（负例注入）" python3 tests/gate_test.py
+step "1/6 语法编译 (compileall)" "$PY" -m compileall -q server tests scripts
+step "2/6 单元测试" "$PY" tests/unit_tests.py
+step "3/6 门禁自测（负例注入）" "$PY" tests/gate_test.py
 
 # mock 模式起服（无 key 也可跑）。先彻底清理同端口残留实例（SIGTERM→SIGKILL），
 # 否则上次被 timeout 杀掉的脚本的子进程会占住端口导致 smoke 连接拒绝。
@@ -28,7 +33,7 @@ PORT="${CI_GATE_PORT:-8098}"
 pkill -f "uvicorn main:app --host 127.0.0.1 --port ${PORT}" 2>/dev/null || true
 sleep 1
 pkill -9 -f "uvicorn main:app --host 127.0.0.1 --port ${PORT}" 2>/dev/null || true
-(cd server && LLM_PROVIDER=deepseek python3 -m uvicorn main:app --host 127.0.0.1 --port ${PORT} >/tmp/ci_gate_uvicorn.log 2>&1 & echo $! > /tmp/ci_gate.pid)
+(cd server && LLM_PROVIDER=deepseek "$PY" -m uvicorn main:app --host 127.0.0.1 --port ${PORT} >/tmp/ci_gate_uvicorn.log 2>&1 & echo $! > /tmp/ci_gate.pid)
 trap 'kill "$(cat /tmp/ci_gate.pid 2>/dev/null)" 2>/dev/null || true' EXIT
 
 READY=0
@@ -44,10 +49,10 @@ if [ "$READY" != "1" ]; then
 fi
 echo "✅ 4/6 mock 服务就绪"; PASS=$((PASS+1))
 
-step "5/6 smoke 全链路" env ATOMS_BASE="http://127.0.0.1:${PORT}" python3 tests/smoke.py
+step "5/6 smoke 全链路" env ATOMS_BASE="http://127.0.0.1:${PORT}" "$PY" tests/smoke.py
 
 step "6/6 评估门禁 (mock, run-twice-average)" bash -c \
-  "(cd server && python3 -m evals.runner --runs 2 --model mock_ci_unavailable) && python3 scripts/eval_gate.py --expect-mock"
+  "(cd server && '$PY' -m evals.runner --runs 2 --model mock_ci_unavailable) && '$PY' scripts/eval_gate.py --expect-mock"
 # 说明：CI 门禁固定走 mock（无 key 也可跑、秒级、确定性）；
 # 全量真实评估成本高（47 case × N 次 × 数分钟），按需单独执行：
 #   cd server && python -m evals.runner --runs 2                 # 真实全量（约小时级）
