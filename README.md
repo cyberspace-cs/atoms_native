@@ -10,11 +10,51 @@
 
 ## 📋 提交说明（评审请从这里开始）
 
-- **快速体验（1 分钟）**：直接打开上面的在线演示，用演示账号登录 → 输入想法生成 → 预览 → 对话精修。
-- **本地验证（3 分钟）**：`cd server && pip install -r ../requirements.txt && python -m uvicorn main:app --port 8000`，浏览器打开 `http://127.0.0.1:8000`。**无需任何 API Key**（无 key 自动走离线模板模式，全流程可跑通；填入 `DEEPSEEK_API_KEY` 即为真实生成）。
-- **自动化验证**：`python tests/unit_tests.py`（30 项单测）+ `tests/smoke.py`（12 项端到端断言）；CI（GitHub Actions）在每次 push 时自动跑 compileall + smoke + 评估门禁。
-- **文档地图**：产品规格见 `docs/spec.md`，技术设计见 `docs/design.md`，企业化改造清单见 `SDD_ENTERPRISE_TODO.md`。
-- **远程仓库**：GitHub（`cyberspace-cs/atoms_native`）与 Gitee（`buleboy8065/atoms_native`）双源同步，代码一致。
+### 提交物清单
+
+| 项           | 内容                                                                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **在线演示** | `https://taoxie.vip/atoms-native/`（官网首页）· [`/studio.html`](https://taoxie.vip/atoms-native/studio.html)（工作台）· [`/admin.html`](https://taoxie.vip/atoms-native/admin.html)（研效看板） |
+| **演示账号** | `demo` / `demo123456`（含预置项目，免注册直接体验）                                                                                                                                              |
+| **源码仓库** | GitHub `cyberspace-cs/atoms_native` · Gitee `buleboy8065/atoms_native`（双源同 commit，国内访问 Gitee 更快）                                                                                     |
+| **文档**     | 本 README（思路/取舍/完成度/扩展）· `docs/spec.md`（PRD）· `docs/design.md`（技术设计）· `SDD_ENTERPRISE_TODO.md`（企业化改造清单）                                                              |
+| **生产环境** | 腾讯云 + nginx 子路径 + uvicorn（8088），真实 DeepSeek 生成已在线上端到端验证（`mock:false`）                                                                                                    |
+
+### 三条验证路径（由浅入深，任选）
+
+1. **在线体验（1 分钟，零安装）**：打开在线演示 → 演示账号登录 → 输入想法 → `⚡ 生成应用` → 预览 → 对话精修。无需任何 Key。
+2. **本地运行（3 分钟）**：
+   ```bash
+   cd server && pip install -r ../requirements.txt
+   python -m uvicorn main:app --port 8000    # http://127.0.0.1:8000
+   ```
+   **无需 API Key**：无 key 自动走离线模板模式，注册→生成→预览→精修全链路可跑通；在 `server/.env` 填入 `DEEPSEEK_API_KEY` 后即为真实生成（一次完整生成约 60–90s，4 次顺序 LLM 调用；Race Mode 并行约 48s）。
+3. **Docker（2 分钟）**：`cp server/.env.example .env && docker compose up -d --build` → `http://localhost:8088`。
+
+### 自动化验证（不需要浏览器）
+
+| 命令                                                     | 覆盖内容                                                                                      | 预期          |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------- |
+| `python tests/unit_tests.py`                             | 安全扫描（注入/XSS/泄露/越权）、审计 hash-chain、限流降级与恢复、可观测性、评估指标、摩擦信号 | 30 项全过     |
+| `ATOMS_BASE=http://127.0.0.1:8099 python tests/smoke.py` | 注册→生成→持久化→安全分→metrics→反馈→回滚 全链路                                              | 12 项断言全过 |
+| GitHub Actions                                           | push 自动跑 compileall + mock 启动 + smoke + 评估门禁（结构化输出有效性回归）                 | 全绿          |
+
+### 人工验收路径（10 项逐条可核对）
+
+| #   | 验收点       | 操作                                  | 预期结果                                                                              | 对应实现                                              |
+| --- | ------------ | ------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 1   | 账号鉴权     | `studio.html` 注册/登录               | 进入工作台；接口走 Bearer Token                                                       | [auth.py](server/auth.py)                             |
+| 2   | 多智能体生成 | 输入想法 → `⚡ 生成应用`               | 活动流依次渲染 PM(Emma)→架构师(Bob)→工程师(Alex)→评审(Mike)；产物为可运行单文件 HTML  | [pipeline.py](server/agent/pipeline.py)               |
+| 3   | 沙箱预览     | 在预览区实际操作生成的应用            | 可交互、可持久化（localStorage 垫片）；iframe 无 `allow-same-origin`，服务端永不 eval | [app.js](public/app.js)                               |
+| 4   | 对话精修     | 输入「把主色调改成绿色」              | 基于上一版增量修改并生成新版本，版本历史完整                                          | `/api/refine`                                         |
+| 5   | Race Mode    | 点「并行跑多个模型，评审打分选最优」  | 多模型线程并行、评分排序、自选最优                                                    | [race.py](server/agent/race.py)                       |
+| 6   | 版本回滚     | 预览区 `🕘 版本` → 回退旧版            | 当前版本切换；回滚同时记入摩擦信号                                                    | [main.py](server/main.py) `rollback`                  |
+| 7   | 导出         | 点 `导出`                             | 下载自包含 HTML，双击可独立运行                                                       | `exportBtn`                                           |
+| 8   | 安全扫描     | 生成完成观察 security 事件            | 输出 OWASP LLM Top 10:2025 扫描 findings + 0–100 安全分                               | [security.py](server/security.py)                     |
+| 9   | 研效看板     | 打开 `admin.html`                     | 智能体×模型调用分布、最近调用、限流后端自省、24h 摩擦信号总览                         | `/api/metrics`                                        |
+| 10  | 测试与 CI    | 跑上面自动化验证，或看 GitHub Actions | 全绿；评估门禁防质量回归                                                              | [tests/](tests/) · [ci.yml](.github/workflows/ci.yml) |
+
+> **诚实性说明**：无 Key 时走离线模板并明确标注 `mock`，绝不伪装成真实生成；真实 LLM 调用失败/输出不合法时给出明确原因（如 OpenRouter Provider 限制 404、429 限流），不静默降级——这是笔试题「质量与掌控性」的直接体现。
 
 ---
 
