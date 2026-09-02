@@ -12,6 +12,7 @@ from agent.llm import chat, provider_available, LLM_PROVIDER
 from database import log_agent_run
 import security
 import observability as obs
+import friction
 
 
 def _tok(s: str) -> int:
@@ -248,6 +249,9 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
     trace_id = obs.corr_id()
     if mock:
         yield {"type": "system", "message": f"⚠️ 未检测到可用 LLM（{model}）或缺少 API Key，已切换离线模板模式——全流程仍可跑通。"}
+        # 摩擦信号：整轮没走真实模型，这条会话对质量评估没有参考价值
+        friction.record(project_id, "mock_mode",
+                        f"未检测到可用 LLM（{model}）或缺少 API Key", session_id=trace_id)
     # LLMOps：关联 ID + prompt hash（便于日志/审计关联且不泄露 prompt 内容）
     yield {"type": "trace", "trace_id": trace_id,
            "prompt_hash": obs.prompt_hash(idea), "model": model}
@@ -277,6 +281,9 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
             if e:
                 erred = True
                 last_err = e
+                # 摩擦信号：真实 LLM 调用失败，是「你和 AI 搏斗过」最直接的证据
+                friction.record(project_id, "llm_error",
+                                f"{agent}: {str(e)[:200]}", session_id=trace_id)
             log_agent_run(project_id, None, agent, model,
                           json.dumps(messages, ensure_ascii=False)[:2000], (t or "")[:4000],
                           dt_ms, toks, bool(e), e, None)
@@ -296,6 +303,10 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
         if _valid_html(cand):
             return cand
         # 格式修正重试：明确要求只输出 HTML
+        # 摩擦信号：首次没吐出合法 HTML，说明提示词/长度约束在这一类任务上不稳定
+        friction.record(project_id, "format_retry",
+                        f"{label}: 首次输出非合法 HTML，触发格式修正重试",
+                        session_id=trace_id)
         c2 = _agent(label, [{"role": "system", "content": system_prompt},
                             {"role": "user", "content": HTML_ONLY_RETRY}], max_tokens=max_tokens)
         cand2 = _extract_html(c2) if c2 else ""
@@ -347,6 +358,10 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
                    f"只输出修改后的完整 <!DOCTYPE html> 文件，不要解释。")
             html = _produce_html(REFINE_SYSTEM, ctx, "Engineer")
             # 精修失败→保留上一版（不降级成离线模板，避免「假成功」）
+            if html is None:
+                # 摩擦信号：增量修改没产出合法 HTML，说明长上下文改写是当前短板
+                friction.record(project_id, "fell_back",
+                                "精修未产出合法 HTML，保留上一版", session_id=trace_id)
             code = html if html is not None else refine_code
     else:
         if mock:
@@ -372,6 +387,8 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
                 code = _mock_app(idea)
                 fell_back = True
                 last_err = "工程师输出不是有效 HTML（缺少 <!DOCTYPE/<html> 或长度不足），已回退离线模板"
+                # 摩擦信号：调用成功却拿不到合法 HTML，属于最难排查的一类失败
+                friction.record(project_id, "fell_back", last_err, session_id=trace_id)
             else:
                 code = html
     # LLMOps：记录本次生成的 TTFT（proxy：pipeline 启动到工程师首段输出的墙钟）
@@ -397,6 +414,9 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
     if verdict == "fix" and not mock:
         yield {"type": "agent_start", "agent": "Engineer", "label": "工程师 · Alex（修复）", "icon": "⚙️"}
         patch = (_extract_json(review_text) or {}).get("patch_instructions", "")
+        # 摩擦信号：评审打回 = 首版不达标，这类任务的 prompt/约束需要复盘
+        friction.record(project_id, "review_fix",
+                        f"评审打回：{str(patch)[:200]}", session_id=trace_id)
         ctx = f"[修复指引]\n{patch}\n\n[当前代码]\n{code}\n\n[任务] 按指引修改，只输出修改后的完整 <!DOCTYPE html> 文件，不要解释。"
         html = _produce_html(FIX_SYSTEM, ctx, "Engineer-Fix")
         if html is not None:
@@ -404,6 +424,9 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
             yield {"type": "app_code", "code": code}
             yield {"type": "agent_output", "agent": "Engineer", "output": code[:1800]}
         else:
+            # 摩擦信号：连修复环都没产出合法 HTML，问题已被确认但未被解决
+            friction.record(project_id, "fix_failed",
+                            "修复输出非合法 HTML，保留修复前版本", session_id=trace_id)
             yield {"type": "agent_output", "agent": "Engineer",
                    "output": "（修复返回内容不是完整 HTML，已保留修复前的版本）"}
 

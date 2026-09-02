@@ -289,5 +289,49 @@ class TestMetrics(unittest.TestCase):
         self.assertAlmostEqual(metrics.structured_output_validity(results), 0.98)
 
 
+class TestFriction(unittest.TestCase):
+    """摩擦信号：只观测不阻断、加权聚合、达阈值才建议沉淀。"""
+
+    @classmethod
+    def setUpClass(cls):
+        import config
+        cls._tmpdir = tempfile.TemporaryDirectory()
+        config.DB_PATH = os.path.join(cls._tmpdir.name, "friction_test.db")
+        import database
+        database.init_db()
+        cls.friction = load("friction", os.path.join(SERVER, "friction.py"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmpdir.cleanup()
+
+    def test_record_and_score(self):
+        self.friction.record(901, "llm_error", "429 too many requests", session_id="s1")
+        self.friction.record(901, "fell_back", "invalid html", session_id="s1")
+        s = self.friction.score(project_id=901, window_hours=None)
+        self.assertEqual(s["n_events"], 2)
+        self.assertEqual(s["score"], 30 + 25)
+        self.assertIn("llm_error", s["by_kind"])
+
+    def test_suggest_below_threshold_is_silent(self):
+        # 单个 format_retry(weight=8) 远低于阈值 → 不打扰用户
+        self.friction.record(902, "format_retry", "first try invalid", session_id="s2")
+        self.assertIsNone(self.friction.suggest(902, window_hours=None))
+
+    def test_suggest_above_threshold(self):
+        self.friction.record(903, "mock_mode", "no api key", session_id="s3")
+        sug = self.friction.suggest(903, window_hours=None)
+        self.assertIsNotNone(sug)
+        self.assertGreaterEqual(sug["score"], self.friction.SUGGEST_THRESHOLD)
+        self.assertTrue(sug["reasons"])
+
+    def test_record_never_raises(self):
+        """观测逻辑任何异常都不能拖垮主流程。"""
+        with mock.patch.object(self.friction.database, "get_conn",
+                               side_effect=RuntimeError("db down")):
+            self.assertIsNone(self.friction.record(904, "llm_error", "x"))
+            self.assertEqual(self.friction.score(project_id=905)["score"], 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

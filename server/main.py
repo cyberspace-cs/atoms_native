@@ -37,6 +37,9 @@ app.add_middleware(
 # ---- 多租户分布式限流 + 并发守卫（server/ratelimit.py，fail-open + 进程内降级）----
 import ratelimit as rl
 
+# ---- 摩擦信号（server/friction.py）：识别「你和 AI 搏斗过」的会话并建议沉淀经验 ----
+import friction
+
 
 def _audit_ctx(request: Request | None, authorization: str | None):
     """从 Request/Header 提取 SOC 2 审计所需的 source_ip 与 session_id。"""
@@ -469,6 +472,8 @@ def rollback(pid: int, body: dict = {}, user=Depends(require_user),
     conn.close()
     log_audit(user["id"], "rollback", f"project:{pid}", f"to_version:{new_vid}",
               source_ip=ip, session_id=sid)
+    # 摩擦信号：回滚说明新版本不如旧版本，这类需求值得复盘
+    friction.record(pid, "rollback", f"回滚到版本 {new_vid}", user_id=user["id"])
     return {"ok": True, "version_id": new_vid}
 
 
@@ -501,7 +506,17 @@ def metrics(user=Depends(require_user)):
         "observability": obs.summary(),
         # 限流后端自省：redis / inproc 一眼可见，杜绝沉默降级
         "ratelimit": rl.status(),
+        # 摩擦信号：24h 内「和 AI 搏斗过」的会话聚合，供经验沉淀排优先级
+        "friction": friction.summary(window_hours=24),
     }
+
+
+@app.get("/api/projects/{pid}/friction")
+def project_friction(pid: int, user=Depends(require_user)):
+    """单项目摩擦信号：值得沉淀经验时返回建议（对齐 TeamAI「搏斗过才打扰」）。"""
+    _get_project(pid, user)  # 越权校验
+    return friction.suggest(pid, window_hours=24) or {
+        "project_id": pid, "worth_documenting": False, "score": 0, "reasons": []}
 
 
 @app.post("/api/feedback")
@@ -515,6 +530,11 @@ def feedback(body: dict, user=Depends(require_user),
     p = _get_project(pid, user) if pid else None
     ip, sid = _audit_ctx(request, authorization)
     fid = save_feedback(p["id"] if p else None, vid, user["id"], rating, comment)
+    # 摩擦信号：用户点踩是「这次生成不达标」最直接的证据
+    if rating < 0 and p:
+        friction.record(p["id"], "negative_feedback",
+                        f"rating:{rating}" + (f" · {str(comment)[:200]}" if comment else ""),
+                        user_id=user["id"])
     log_audit(user["id"], "feedback", f"project:{pid}", f"rating:{rating}",
               source_ip=ip, session_id=sid)
     return {"ok": True, "id": fid}

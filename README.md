@@ -8,19 +8,29 @@
 > **演示账号**：`demo` / `demo123456`（含预置项目，可直接打开体验，无需注册）
 > 无 LLM Key 时自动进入「离线模板模式」，全链路仍可演示；配置 Key 后为真实大模型生成。
 
+## 📋 提交说明（评审请从这里开始）
+
+- **快速体验（1 分钟）**：直接打开上面的在线演示，用演示账号登录 → 输入想法生成 → 预览 → 对话精修。
+- **本地验证（3 分钟）**：`cd server && pip install -r ../requirements.txt && python -m uvicorn main:app --port 8000`，浏览器打开 `http://127.0.0.1:8000`。**无需任何 API Key**（无 key 自动走离线模板模式，全流程可跑通；填入 `DEEPSEEK_API_KEY` 即为真实生成）。
+- **自动化验证**：`python tests/unit_tests.py`（30 项单测）+ `tests/smoke.py`（12 项端到端断言）；CI（GitHub Actions）在每次 push 时自动跑 compileall + smoke + 评估门禁。
+- **文档地图**：产品规格见 `docs/spec.md`，技术设计见 `docs/design.md`，企业化改造清单见 `SDD_ENTERPRISE_TODO.md`。
+- **远程仓库**：GitHub（`cyberspace-cs/atoms_native`）与 Gitee（`buleboy8065/atoms_native`）双源同步，代码一致。
+
 ---
 
 ## ✨ 核心能力
 
-| 能力 | 说明 |
-|------|------|
-| 🧠 **多智能体流水线** | PM(Emma) 出需求规格 → Architect(Bob) 出架构/数据模型 → Engineer(Alex) 生成单文件 HTML 应用 → Reviewer(Mike) 自审修复。前端实时可视化每个 Agent 的工作流。 |
-| 📱 **实时预览** | 生成的单文件应用通过 sandbox iframe 即时渲染、可交互。 |
-| 💬 **对话式迭代精修** | "把主色调改成绿色" → 基于上一版代码增量修改，保留完整版本历史。 |
-| 🏁 **Race Mode（多模型择优）** | 同一需求并行跑多个 LLM（DeepSeek / Reasoner 等），评审打分排序，用户选最优。 |
-| 🗂️ **项目画廊** | 我的项目列表、重开、删除；每次生成/精修都是带模型标注的版本。 |
-| 💾 **数据持久化** | 用户、项目、版本、对话、Agent 审计轨迹全部落 SQLite。 |
-| 📦 **导出** | 一键导出生成的 HTML 文件。 |
+| 能力                              | 说明                                                                                                                                                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🧠 **多智能体流水线**              | PM(Emma) 出需求规格 → Architect(Bob) 出架构/数据模型 → Engineer(Alex) 生成单文件 HTML 应用 → Reviewer(Mike) 自审修复。前端实时可视化每个 Agent 的工作流。                                                                           |
+| 📱 **实时预览**                    | 生成的单文件应用通过 sandbox iframe 即时渲染、可交互。                                                                                                                                                                              |
+| 💬 **对话式迭代精修**              | "把主色调改成绿色" → 基于上一版代码增量修改，保留完整版本历史。                                                                                                                                                                     |
+| 🏁 **Race Mode（多模型择优）**     | 同一需求并行跑多个 LLM（DeepSeek / Reasoner 等），评审打分排序，用户选最优。                                                                                                                                                        |
+| 🗂️ **项目画廊**                    | 我的项目列表、重开、删除；每次生成/精修都是带模型标注的版本。                                                                                                                                                                       |
+| 💾 **数据持久化**                  | 用户、项目、版本、对话、Agent 审计轨迹全部落 SQLite。                                                                                                                                                                               |
+| 📦 **导出**                        | 一键导出生成的 HTML 文件。                                                                                                                                                                                                          |
+| 🔥 **摩擦信号（Friction Signal）** | 识别「你和 AI 搏斗过」的会话：LLM 报错、输出不合法回退、评审打回、用户点踩/回滚都会被加权记录；摩擦分达阈值才建议把这次踩坑沉淀进评估集（`evals/cases.json`），形成「线上摩擦 → 评估集 → 回归测试」闭环。只观测、不阻断、永不抛错。 |
+| 🛡️ **生产化工程**                  | Redis 分布式限流（故障自动恢复）+ SAST 安全扫描（OWASP LLM Top 10）+ SOC 2 审计日志（hash-chain）+ OpenTelemetry 风格可观测 + CI 评估门禁。                                                                                         |
 
 ## 🛡️ 安全边界（Green / Red Zone）
 
@@ -77,7 +87,10 @@ docker compose up -d --build  # http://localhost:8088
 - [x] Race Mode 多模型并行择优
 - [x] 项目画廊（列表/重开/删除）
 - [x] Docker + nginx 子路径部署方案
-- [x] 无 key 离线模板降级
+- [x] 无 key 离线模板降级（诚实标注 mock，杜绝「假成功」）
+- [x] 生产化：分布式限流、SAST 安全扫描、SOC 2 审计、可观测看板（admin.html）
+- [x] 摩擦信号 + 评估集 + CI 评估门禁
+- [x] 单元测试 30 项 + 端到端 smoke 12 项
 
 **未做（时间/范围控制，见扩展）**
 - [ ] 真实 Stripe 支付 / 多租户企业权限
@@ -88,13 +101,13 @@ docker compose up -d --build  # http://localhost:8088
 
 ## 🔭 继续投入的扩展计划（含优先级）
 
-| 优先级 | 扩展 | 理由 |
-|--------|------|------|
-| P0 | **生成应用数据真正落库**（预览 iframe 经 postMessage 把 localStorage 同步回平台，刷新不丢） | 当前沙箱持久化为会话级，平台级持久化可补强 |
-| P1 | **可视化编辑器 + 多页路由**：单文件应用支持多"页面"与组件拖拽 | 更接近 Atoms 的完整度 |
-| P1 | **GitHub 同步导出**：一键推到用户仓库（Atoms 的 Export to GitHub） | 契合"拥有你构建的东西" |
-| P2 | **更多 Agent 角色**：Deep Researcher / SEO / Ads（对标 Atoms 团队） | 体验完整度 |
-| P2 | **混元/千问原生接入 + 模型市场** | 多模型生态 |
+| 优先级 | 扩展                                                                                        | 理由                                       |
+| ------ | ------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| P0     | **生成应用数据真正落库**（预览 iframe 经 postMessage 把 localStorage 同步回平台，刷新不丢） | 当前沙箱持久化为会话级，平台级持久化可补强 |
+| P1     | **可视化编辑器 + 多页路由**：单文件应用支持多"页面"与组件拖拽                               | 更接近 Atoms 的完整度                      |
+| P1     | **GitHub 同步导出**：一键推到用户仓库（Atoms 的 Export to GitHub）                          | 契合"拥有你构建的东西"                     |
+| P2     | **更多 Agent 角色**：Deep Researcher / SEO / Ads（对标 Atoms 团队）                         | 体验完整度                                 |
+| P2     | **混元/千问原生接入 + 模型市场**                                                            | 多模型生态                                 |
 
 ---
 
@@ -103,8 +116,8 @@ docker compose up -d --build  # http://localhost:8088
 - **完成度**：注册→生成→预览→精修全链路可跑；SQLite 持久化；结构化代码 + 错误处理 + CORS。
 - **工程思维**：SDD（spec→design→tasks）驱动；技术选型有文档化取舍；复杂度受控。
 - **用户体验**：登录→Studio→预览流程清晰；Agent 活动流让"黑盒"透明；预览即点即用。
-- **创新性**：① 把 Atoms 多 Agent 协作**可视化**；② Race Mode 多模型择优；③ green/red-zone 安全边界 + 沙箱隔离。
-- **可交付性**：README 清晰 + Docker/部署方案 + 公网可测链接 + 双远程源码。
+- **创新性**：① 把 Atoms 多 Agent 协作**可视化**；② Race Mode 多模型择优；③ green/red-zone 安全边界 + 沙箱隔离；④ **摩擦信号**——借 TeamAI「和 AI 搏斗过才值得记录」的洞察，把线上失败自动转化为评估集用例，质量改进形成飞轮。
+- **可交付性**：README 清晰（含评审快速上手）+ Docker/部署方案 + 公网可测链接 + 双远程源码 + CI 自动验证。
 
 ---
 
@@ -114,17 +127,25 @@ docker compose up -d --build  # http://localhost:8088
 Atoms_Native/
 ├── docs/            # SDD: spec.md (PRD) + design.md (技术设计)
 ├── server/          # FastAPI 后端
-│   ├── main.py      # 路由 + SSE
+│   ├── main.py      # 路由 + SSE + metrics + rollback/feedback + 摩擦信号接口
 │   ├── auth.py      # 鉴权
-│   ├── database.py  # SQLite
+│   ├── database.py  # SQLite（含 friction_events 表）
 │   ├── models.py    # Pydantic
 │   ├── config.py    # .env 加载
+│   ├── security.py  # SAST 安全扫描（OWASP LLM Top 10:2025）
+│   ├── audit.py     # SOC 2 审计日志（hash-chain 防篡改）
+│   ├── ratelimit.py # Redis 分布式限流 + 并发守卫（fail-open）
+│   ├── observability.py # 指标分位 / PII 脱敏 / prompt hash
+│   ├── friction.py  # 摩擦信号（识别值得沉淀经验的会话）
+│   ├── evals/       # 评估集 cases.json + 指标 metrics.py + 跑批 runner.py
 │   ├── agent/
 │   │   ├── llm.py        # 多厂商 LLM 注册表
-│   │   ├── pipeline.py   # PM→Arch→Eng→Reviewer
+│   │   ├── pipeline.py   # PM→Arch→Eng→Reviewer + 摩擦埋点
 │   │   └── race.py       # 多模型并行择优
 │   └── .env.example
-├── public/          # 前端（index.html=官网首页 / studio.html=工作台 / app.js / styles.css / landing.css）
+├── public/          # 前端（index.html=官网首页 / studio.html=工作台 / admin.html 看板 / landing.css）
+├── tests/           # unit_tests.py（30 项单测）+ smoke.py（12 项端到端）
+├── .github/workflows/ci.yml  # CI: compileall + smoke + 评估门禁
 ├── Dockerfile / docker-compose.yml / nginx-atoms-native.conf
 └── README.md
 ```

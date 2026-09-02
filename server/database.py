@@ -106,6 +106,16 @@ def init_db():
             ts_utc TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
+        CREATE TABLE IF NOT EXISTS friction_events(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER,
+            session_id TEXT,
+            user_id INTEGER,
+            kind TEXT NOT NULL,
+            weight INTEGER NOT NULL,
+            detail TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
         """
     )
     # 迁移：对已有库补齐新增列（ALTER 失败即说明已存在，忽略）
