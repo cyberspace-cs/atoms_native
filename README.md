@@ -48,13 +48,13 @@
 
 ### 提交物清单
 
-| 项           | 内容                                                                                                                                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **在线演示** | `https://taoxie.vip/atoms-native/`（官网首页）· [`/studio.html`](https://taoxie.vip/atoms-native/studio.html)（工作台）· [`/admin.html`](https://taoxie.vip/atoms-native/admin.html)（研效看板） |
-| **演示账号** | `demo` / `demo123456`（含预置项目，免注册直接体验）                                                                                                                                              |
-| **源码仓库** | GitHub `cyberspace-cs/atoms_native` · Gitee `buleboy8065/atoms_native`（双源同 commit，国内访问 Gitee 更快）                                                                                     |
-| **文档**     | 本 README（思路/取舍/完成度/扩展）· `docs/spec.md`（PRD）· `docs/design.md`（技术设计）· `SDD_ENTERPRISE_TODO.md`（企业化改造清单）                                                              |
-| **生产环境** | 腾讯云 + nginx 子路径 + uvicorn（8088），真实 DeepSeek 生成已在线上端到端验证（`mock:false`）                                                                                                    |
+| 项           | 内容                                                                                                                                                                                                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **在线演示** | `https://taoxie.vip/atoms-native/`（官网首页）· [`/studio.html`](https://taoxie.vip/atoms-native/studio.html)（工作台）· [`/discover.html`](https://taoxie.vip/atoms-native/discover.html)（发现与模板）· [`/plan.html`](https://taoxie.vip/atoms-native/plan.html)（版本历史）· [`/admin.html`](https://taoxie.vip/atoms-native/admin.html)（研效看板） |
+| **演示账号** | `demo` / `demo123456`（含预置项目，免注册直接体验）                                                                                                                                                                                                                                                                                                      |
+| **源码仓库** | GitHub `cyberspace-cs/atoms_native` · Gitee `buleboy8065/atoms_native`（双源同 commit，国内访问 Gitee 更快）                                                                                                                                                                                                                                             |
+| **文档**     | [笔试提交文档](docs/笔试提交文档.md)（官方模板四节，链接与说明齐）· 本 README（思路/取舍/完成度/扩展）· `docs/spec.md`（PRD）· `docs/design.md`（技术设计）· `SDD_ENTERPRISE_TODO.md`（企业化改造清单）                                                                                                                                                  |
+| **生产环境** | 腾讯云 + nginx 子路径 + uvicorn（8088），真实 DeepSeek 生成已在线上端到端验证（`mock:false`）                                                                                                                                                                                                                                                            |
 
 ### 三条验证路径（由浅入深，任选）
 
