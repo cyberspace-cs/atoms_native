@@ -20,7 +20,7 @@ import urllib.request
 BASE = os.environ.get("CURATOR_BASE", "http://127.0.0.1:8088")
 CURATOR_USER = os.environ.get("CURATOR_USER", "curator")
 CURATOR_PASS = os.environ.get("CURATOR_PASS", "curator#20260902")
-DB_PATH = os.environ.get("CURATOR_DB", os.path.join(os.path.dirname(__file__), "..", "data", "app.db"))
+DB_PATH = os.environ.get("CURATOR_DB", os.path.join(os.path.dirname(__file__), "..", "atoms_native.db"))
 GEN_TIMEOUT = int(os.environ.get("CURATOR_TIMEOUT", "240"))
 
 
