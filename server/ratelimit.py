@@ -195,7 +195,7 @@ def renew(tenant_id, ttl: int = 300) -> bool:
             return bool(client.expire(key, ttl))
         except Exception:
             return True  # fail-open：续期失败不中断生成
-    return True  # 进程内集合无需续期
+    return tenant_id in _inproc_active  # 进程内：与 Redis 语义一致，锁不在则 False
 
 
 def release(tenant_id):
