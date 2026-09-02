@@ -519,5 +519,101 @@ class TestDiscover(unittest.TestCase):
             self.assertIsNone(self.disc.use_template(1, 1))
 
 
+class TestAdminConsole(unittest.TestCase):
+    """管理端：/api/admin/users 的 RBAC + make_admin 提权脚本三态。
+
+    隔离：DB 与审计 WORM 文件都指向临时目录，不碰真实数据/审计链。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import config
+        cls._tmp = tempfile.TemporaryDirectory()
+        config.DB_PATH = os.path.join(cls._tmp.name, "admin_test.db")
+        import database
+        database.DB_PATH = config.DB_PATH
+        database.init_db()
+        # 审计 WORM 重定向到临时文件（避免污染真实 hash-chain）。
+        # 注意：database.py 内部 `import audit` 得到的是 sys.modules 实例，
+        # 与本文件顶部 load() 出来的 audit 不是同一对象，必须改 database.audit。
+        database.audit.WORM_PATH = os.path.join(cls._tmp.name, "audit_test.log")
+        database.audit._last_hash = None
+        cls.main = load("main", os.path.join(SERVER, "main.py"))
+        from fastapi.testclient import TestClient
+        cls.client = TestClient(cls.main.app)
+        # 准备三个账号：普通用户 / 目标用户 / admin
+        cls.main.create_user("plain", "pass1234")
+        cls.main.create_user("target", "pass1234")
+        cls.main.create_user("boss", "pass1234")
+        import database as db
+        conn = db.get_conn()
+        conn.execute("UPDATE users SET role='admin' WHERE username='boss'")
+        conn.commit()
+        conn.close()
+        cls.token_plain = cls.main.create_session(cls._uid("plain"))
+        cls.token_boss = cls.main.create_session(cls._uid("boss"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    @classmethod
+    def _uid(cls, username):
+        import database as db
+        conn = db.get_conn()
+        uid = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()["id"]
+        conn.close()
+        return uid
+
+    def test_users_requires_auth(self):
+        r = self.client.get("/api/admin/users")
+        self.assertEqual(r.status_code, 401)
+
+    def test_users_forbidden_for_plain_user(self):
+        r = self.client.get("/api/admin/users",
+                            headers={"Authorization": "Bearer " + self.token_plain})
+        self.assertEqual(r.status_code, 403)
+
+    def test_users_ok_for_admin(self):
+        r = self.client.get("/api/admin/users",
+                            headers={"Authorization": "Bearer " + self.token_boss})
+        self.assertEqual(r.status_code, 200)
+        users = r.json()["users"]
+        names = {u["username"] for u in users}
+        self.assertTrue({"plain", "target", "boss"} <= names)
+        for u in users:
+            self.assertIn(u["role"], ("user", "admin"))
+            self.assertTrue(u["id"] and u["created_at"])
+
+    def test_set_role_flow_audited(self):
+        """set-role 改角色成功 + 留痕出现在审计事件流。"""
+        r = self.client.post("/api/admin/set-role",
+                             headers={"Authorization": "Bearer " + self.token_boss},
+                             json={"username": "target", "role": "admin"})
+        self.assertEqual(r.status_code, 200)
+        events = self.main.query_audit(limit=50)
+        self.assertTrue(any(e["action"] == "role_change" and e["resource_id"] == "user:target"
+                            for e in events), "role_change 应写入审计（resource_id=user:target）")
+
+    def test_make_admin_script_states(self):
+        """提权脚本：user->admin / 幂等 / 用户不存在 三态（独立用户，不污染 RBAC 用例）。"""
+        self.main.create_user("script_user", "pass1234")
+        mk = load("make_admin", os.path.join(SERVER, "..", "scripts", "make_admin.py"))
+        ok, msg = mk.set_role("script_user", "admin")
+        self.assertTrue(ok)
+        import database as db
+        conn = db.get_conn()
+        role = conn.execute("SELECT role FROM users WHERE username='script_user'").fetchone()["role"]
+        conn.close()
+        self.assertEqual(role, "admin")
+        # 幂等
+        ok2, msg2 = mk.set_role("script_user", "admin")
+        self.assertTrue(ok2)
+        self.assertIn("幂等", msg2)
+        # 不存在
+        ok3, msg3 = mk.set_role("no_such_user", "admin")
+        self.assertFalse(ok3)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

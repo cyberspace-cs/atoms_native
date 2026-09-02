@@ -620,6 +620,19 @@ def audit_view(user=Depends(require_role("admin"))):
     }
 
 
+@app.get("/api/admin/users")
+def admin_users(user=Depends(require_role("admin"))):
+    """用户列表（id/username/role/created_at），供管理端角色管理。仅 admin。"""
+    ip, sid = _audit_ctx(None, None)
+    log_audit(user["id"], "admin_view_users", "users:all",
+              f"n_shown", source_ip=ip, session_id=sid)
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, username, role, created_at FROM users ORDER BY id ASC").fetchall()
+    conn.close()
+    return {"users": [dict(r) for r in rows]}
+
+
 @app.post("/api/admin/set-role")
 def admin_set_role(body: dict, admin=Depends(require_role("admin"))):
     """RBAC：为指定用户设置角色（最小权限）。仅 admin。"""

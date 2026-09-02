@@ -133,6 +133,18 @@ team_html = (PUBLIC / "team.html").read_text(encoding="utf-8")
 check("D3 team.html 存在且含四位成员卡", team_html.count('class="member-card"') == 4)
 check("D4 studio.html 有 AI 团队入口链接", 'href="./team.html"' in studio)
 
+# ---------- E. admin.html 管理端守卫 ----------
+admin = (PUBLIC / "admin.html").read_text(encoding="utf-8")
+check("E1 admin.html 三 Tab 存在（看板/用户/审计）",
+      all(f'data-tab="{t}"' in admin for t in ("dash", "users", "audit")))
+check("E2 admin.html 登录框与无权限卡存在",
+      'id="auth"' in admin and 'id="noaccess"' in admin)
+check("E3 admin.html 只用相对路径 ./api（子路径部署）",
+      '"/api' not in admin and "'/api" not in admin and "'/admin/users'" in admin.replace("./api", ""))
+check("E4 admin.html 链完整性徽章元素存在", 'id="chainbox"' in admin and "chain_intact" in admin)
+check("E5 admin.html 角色切换调用 set-role",
+      "/admin/set-role" in admin and "onchange" in admin)
+
 # ---------- 汇总 ----------
 print()
 if FAILS:
