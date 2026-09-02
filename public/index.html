@@ -3,161 +3,203 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atoms Native · AI 应用生成平台</title>
+<title>Atoms Native — 用一句话，让 AI 团队为你构建应用</title>
+<meta name="description" content="Atoms Native：AI Agent 驱动的应用生成平台。描述你的想法，PM、架构师、工程师、评审四名智能体协作，几分钟内生成可运行、可交互的 Web 应用。">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./landing.css">
 </head>
 <body>
-<div id="app">
-  <!-- ============ AUTH ============ -->
-  <section id="auth" class="auth">
-    <div class="auth-card glass">
-      <div class="brand">
-        <div class="logo">⚛</div>
-        <div>
-          <h1>Atoms <span>Native</span></h1>
-          <p>用一句话，让 AI 智能体团队为你造出一个可运行的应用</p>
-        </div>
-      </div>
-      <div class="tabs">
-        <button class="tab active" data-tab="login">登录</button>
-        <button class="tab" data-tab="register">注册</button>
-      </div>
-      <form id="authForm" autocomplete="off">
-        <input id="username" placeholder="用户名" autocomplete="off">
-        <input id="password" type="password" placeholder="密码">
-        <button class="primary" type="submit" id="authBtn">进入工作台</button>
-        <div id="authErr" class="err"></div>
-      </form>
-      <div class="hint">演示账号可直接注册体验 · 生成能力由 DeepSeek 等大模型驱动</div>
-    </div>
-    <div class="auth-bg"></div>
-  </section>
 
-  <!-- ============ MAIN ============ -->
-  <div id="main" class="hidden">
-    <header class="topbar glass">
-      <div class="brand sm">
-        <div class="logo sm">⚛</div>
-        <span>Atoms <b>Native</b></span>
-        <span id="modeBadge" class="badge">·</span>
-      </div>
-      <div class="spacer"></div>
-      <div class="user">
-        <span id="userName" class="uname"></span>
-        <a id="adminLink" class="ghost sm" href="./admin.html" target="_blank">📊 研效看板</a>
-        <button id="logoutBtn" class="ghost">退出</button>
-      </div>
-    </header>
-
-    <div class="layout">
-      <!-- sidebar: gallery -->
-      <aside class="sidebar glass">
-        <div class="side-head">
-          <span>我的项目</span>
-          <button id="newBtn" class="ghost sm">+ 新建</button>
-        </div>
-        <div id="gallery" class="gallery"></div>
-      </aside>
-
-      <!-- studio -->
-      <section class="studio">
-        <div class="idea-card glass">
-          <label>描述你的想法，让智能体团队开始工作 🚀</label>
-          <textarea id="idea" rows="3" placeholder="例如：一个帮团队管理每日饮水与目标打卡的小工具，带统计图表"></textarea>
-          <div class="row">
-            <button id="genBtn" class="primary">⚡ 生成应用</button>
-            <select id="modelSel" class="model-sel" title="选择生成使用的模型（免费优先）"></select>
-            <span class="tip" id="genTip">PM → 架构 → 工程 → 评审，四步成应用</span>
-          </div>
-          <div id="templates" class="templates"></div>
-        </div>
-
-        <div class="phase-card glass">
-          <div class="card-head"><span>🧭 生成流程</span><span id="phaseStatus" class="status">待开始</span></div>
-          <div id="phasebar" class="phases">
-            <div class="phase" data-phase="PM"><span class="pdot">1</span><span class="plabel">需求</span><small>Emma</small></div>
-            <div class="phase" data-phase="Architect"><span class="pdot">2</span><span class="plabel">架构</span><small>Bob</small></div>
-            <div class="phase" data-phase="Engineer"><span class="pdot">3</span><span class="plabel">工程</span><small>Alex</small></div>
-            <div class="phase" data-phase="Reviewer"><span class="pdot">4</span><span class="plabel">评审</span><small>Mike</small></div>
-            <div class="phase" data-phase="done"><span class="pdot">✓</span><span class="plabel">完成</span></div>
-          </div>
-        </div>
-
-        <div class="team-card glass">
-          <div class="card-head"><span>🤖 AI 团队</span><span class="tip">多智能体协作</span></div>
-          <div id="team" class="team">
-            <div class="member" data-agent="PM"><span class="mic">📋</span><b>Emma</b><small>产品经理 · 需求规格</small></div>
-            <div class="member" data-agent="Architect"><span class="mic">🏗️</span><b>Bob</b><small>架构师 · 系统设计</small></div>
-            <div class="member" data-agent="Engineer"><span class="mic">⚙️</span><b>Alex</b><small>工程师 · 构建应用</small></div>
-            <div class="member" data-agent="Reviewer"><span class="mic">🔍</span><b>Mike</b><small>评审 · 质量把关</small></div>
-          </div>
-        </div>
-
-        <div class="stream-card glass">
-          <div class="card-head"><span>🧠 智能体工作台</span><span id="streamStatus" class="status">空闲</span></div>
-          <div id="stream" class="stream"></div>
-        </div>
-
-        <div class="race-card glass">
-          <div class="card-head"><span>🏁 Race Mode · 多模型择优</span></div>
-          <div id="modelList" class="models"></div>
-          <button id="raceBtn" class="secondary">并行跑多个模型，评审打分选最优</button>
-        </div>
-      </section>
-
-      <!-- preview + refine -->
-      <section class="preview-pane">
-        <div class="preview-card glass">
-          <div class="card-head">
-            <span>📱 实时预览 <span id="secBadge" class="sec-badge hidden"></span></span>
-            <div class="prev-actions">
-              <div class="seg" id="devSeg">
-                <button class="seg-btn on" data-dev="desktop">桌面</button>
-                <button class="seg-btn" data-dev="tablet">平板</button>
-                <button class="seg-btn" data-dev="mobile">手机</button>
-              </div>
-              <button id="rollbackBtn" class="ghost sm">🕘 版本</button>
-              <button id="srcBtn" class="ghost sm">源码</button>
-              <button id="copyBtn" class="ghost sm">复制</button>
-              <button id="exportBtn" class="ghost sm">导出</button>
-              <button id="reloadBtn" class="ghost sm">刷新</button>
-            </div>
-          </div>
-          <div id="versionPanel" class="ver-panel glass hidden"></div>
-          <div id="secPopover" class="sec-popover glass hidden"></div>
-          <div class="frame-wrap">
-            <div id="deviceFrame" class="device desktop">
-              <iframe id="preview" title="preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
-            </div>
-            <div id="frameEmpty" class="frame-empty">生成后，这里会出现你的应用 👀</div>
-          </div>
-          <div id="srcPanel" class="src-panel hidden"><pre id="srcCode"></pre></div>
-        </div>
-
-        <div class="refine-card glass">
-          <div class="card-head"><span>💬 对话式精修</span></div>
-          <div id="chat" class="chat"></div>
-          <div class="chat-input">
-            <input id="refineInput" placeholder="例如：把主色调改成绿色，加一个欢迎标语">
-            <button id="refineBtn" class="primary sm">发送</button>
-          </div>
-          <div class="fb-row">
-            <span class="tip">这个版本质量如何？</span>
-            <button id="fbUp" class="ghost sm">👍 不错</button>
-            <button id="fbDown" class="ghost sm">👎 待改进</button>
-          </div>
-          <div class="fb-comment-row">
-            <input id="fbComment" class="fb-comment" placeholder="补充评价或问题（可选）">
-            <span id="fbState" class="fb-state hidden">已反馈 ✓</span>
-          </div>
-        </div>
-      </section>
+<!-- ================= NAV ================= -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="./">
+      <span class="logo">⚛</span> Atoms <b>Native</b>
+    </a>
+    <div class="nav-links">
+      <a href="#team">AI 团队</a>
+      <a href="#workflow">工作流程</a>
+      <a href="#highlights">技术亮点</a>
+      <a class="nav-cta" href="./studio.html">进入 Studio →</a>
     </div>
   </div>
-</div>
-<div id="toast" class="toast"></div>
-<script src="./app.js"></script>
+</nav>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <div class="pill">🤖 Agentic App Platform · 多智能体应用生成</div>
+      <h1>描述你的想法<br><span class="grad">AI 团队为你构建应用</span></h1>
+      <p class="sub">一句话 → <b>PM 规划 · 架构师设计 · 工程师编码 · 评审把关</b><br>
+      几分钟内得到一个可运行、可交互、可导出的 Web 应用。</p>
+      <div class="hero-typing">
+        <span class="typing-label">试想：</span>
+        <span id="typed"></span><span class="caret"></span>
+      </div>
+      <div class="hero-cta">
+        <a class="btn primary" href="./studio.html">⚡ 免费开始构建</a>
+        <a class="btn ghost" href="#workflow">观看工作流程</a>
+      </div>
+      <div class="hero-note">无需信用卡 · 注册即用 · 无 Key 自动离线演示模式</div>
+    </div>
+
+    <div class="hero-demo">
+      <div class="term glass">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="term-title">atoms-agent-team — live</span></div>
+        <pre id="termBody" class="term-body"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat glass"><b>4</b><span>AI Agent 协作</span></div>
+    <div class="stat glass"><b>&lt;120s</b><span>平均生成时间</span></div>
+    <div class="stat glass"><b>100%</b><span>沙箱隔离执行</span></div>
+    <div class="stat glass"><b>0</b><span>需要编写的代码</span></div>
+  </div>
+</header>
+
+<!-- ================= TEAM ================= -->
+<section class="sec" id="team">
+  <h2>认识你的 <span class="grad">AI 团队</span></h2>
+  <p class="sec-sub">四名各司其职的智能体，像一支真正的产品团队一样协作</p>
+  <div class="team-grid">
+    <div class="member-card glass">
+      <div class="avatar">📋</div>
+      <h3>Emma</h3><div class="role">产品经理</div>
+      <p>把你的模糊想法变成结构化的需求规格：功能清单、页面结构、交互细节。</p>
+    </div>
+    <div class="member-card glass">
+      <div class="avatar">🏗️</div>
+      <h3>Bob</h3><div class="role">架构师</div>
+      <p>设计应用架构与数据模型，规划组件划分与状态管理方案。</p>
+    </div>
+    <div class="member-card glass">
+      <div class="avatar">⚙️</div>
+      <h3>Alex</h3><div class="role">全栈工程师</div>
+      <p>亲手写出完整的单文件 Web 应用：HTML + CSS + JS，即写即跑。</p>
+    </div>
+    <div class="member-card glass">
+      <div class="avatar">🔍</div>
+      <h3>Mike</h3><div class="role">评审工程师</div>
+      <p>审查代码质量与安全边界，自动修复问题后交付，并给出安全评分。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WORKFLOW ================= -->
+<section class="sec alt" id="workflow">
+  <h2>从想法到应用，<span class="grad">四步直达</span></h2>
+  <p class="sec-sub">全程可视化：每个智能体在做什么，你都能实时看到</p>
+  <div class="flow">
+    <div class="step glass"><div class="num">01</div><div class="ic">💬</div><h3>描述想法</h3><p>用自然语言说出你想要的应用，或从示例模板一键开始。</p></div>
+    <div class="arrow">→</div>
+    <div class="step glass"><div class="num">02</div><div class="ic">🤝</div><h3>智能体协作</h3><p>PM → 架构师 → 工程师 → 评审，流水线式接力生成。</p></div>
+    <div class="arrow">→</div>
+    <div class="step glass"><div class="num">03</div><div class="ic">📱</div><h3>实时预览</h3><p>应用在沙箱中即时渲染，桌面 / 平板 / 手机三端可切换。</p></div>
+    <div class="arrow">→</div>
+    <div class="step glass"><div class="num">04</div><div class="ic">🔁</div><h3>对话精修</h3><p>"把主色改成绿色"——聊着天改应用，每个版本可回滚。</p></div>
+  </div>
+
+  <div class="race-banner glass">
+    <div class="race-copy">
+      <h3>🏁 Race Mode · 多模型赛马择优</h3>
+      <p>同一个需求并行调用多个大模型，评审自动打分排序——你只选最好的那一版。</p>
+    </div>
+    <a class="btn primary" href="./studio.html">立即体验</a>
+  </div>
+</section>
+
+<!-- ================= HIGHLIGHTS ================= -->
+<section class="sec" id="highlights">
+  <h2>为 <span class="grad">工程严谨性</span> 而设计</h2>
+  <p class="sec-sub">不只是演示——安全、评测、可观测性贯穿平台始终</p>
+  <div class="hl-grid">
+    <div class="hl glass"><div class="ic">🔐</div><h3>Green / Red 安全边界</h3><p>生成代码只在浏览器 sandbox iframe 中运行；服务端永不 eval / exec；鉴权与密钥管理由人工边界守护。</p></div>
+    <div class="hl glass"><div class="ic">🛡️</div><h3>OWASP LLM Top 10 扫描</h3><p>对生成物做提示注入 / XSS / 系统提示泄露等自动扫描，逐版本给出 0-100 安全评分。</p></div>
+    <div class="hl glass"><div class="ic">📏</div><h3>SDD 规范驱动开发</h3><p>Spec → Design → Tasks 全程文档化；评估集 + pass@k 真实跑分回归，拒绝"感觉良好"。</p></div>
+    <div class="hl glass"><div class="ic">⚡</div><h3>离线降级韧性</h3><p>无 LLM Key 时自动切换离线模板模式，全链路依旧可跑通——演示永不掉链子。</p></div>
+    <div class="hl glass"><div class="ic">🚦</div><h3>分布式限流 + 可观测</h3><p>Redis+Lua 令牌桶多租户限流；OpenTelemetry 追踪、P95 延迟指标、结构化审计日志。</p></div>
+    <div class="hl glass"><div class="ic">📦</div><h3>版本管理与导出</h3><p>每次生成/精修都是带模型标注的版本，支持对比、回滚，一键导出单文件 HTML。</p></div>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section class="cta-sec">
+  <div class="glow g1"></div><div class="glow g2"></div>
+  <h2>准备好让你的想法<span class="grad">跑起来</span>了吗？</h2>
+  <p class="sec-sub">注册一个账号，60 秒后你就有第一个应用。</p>
+  <a class="btn primary big" href="./studio.html">⚛ 进入 Atoms Studio</a>
+</section>
+
+<footer class="foot">
+  <div>⚛ Atoms Native — AI Agent 驱动的应用生成平台（笔试 Demo）</div>
+  <div class="tech">FastAPI · SQLite · 原生 JS 零构建 · 沙箱隔离 · 多模型赛马</div>
+</footer>
+
+<script>
+(() => {
+  // ---- typewriter ----
+  const ideas = [
+    "一个奶茶店点单系统，支持购物车与订单管理",
+    "一个团队每日打卡工具，带统计图表",
+    "一个五子棋小游戏，可以人机对战",
+    "一个可视化数据仪表盘，含卡片指标与图表",
+    "一个活动报名落地页，带表单与倒计时"
+  ];
+  const typedEl = document.getElementById("typed");
+  let ii = 0, ci = 0, deleting = false;
+  function tick() {
+    const cur = ideas[ii];
+    typedEl.textContent = cur.slice(0, ci);
+    if (!deleting) {
+      if (ci < cur.length) { ci++; setTimeout(tick, 60); }
+      else { deleting = true; setTimeout(tick, 1800); }
+    } else {
+      if (ci > 0) { ci--; setTimeout(tick, 24); }
+      else { deleting = false; ii = (ii + 1) % ideas.length; setTimeout(tick, 400); }
+    }
+  }
+  tick();
+
+  // ---- agent terminal demo ----
+  const lines = [
+    ["pm",      "📋 Emma（PM）：解析需求，生成功能规格…"],
+    ["pm-ok",   "   ✓ 规格：3 个页面 · 8 项功能 · 交互清单"],
+    ["arch",    "🏗️ Bob（架构师）：设计数据模型与组件树…"],
+    ["arch-ok", "   ✓ 架构：App Shell + 4 组件 + localStorage 持久化"],
+    ["eng",     "⚙️ Alex（工程师）：编写单文件应用…"],
+    ["eng-ok",  "   ✓ 生成 486 行 HTML/CSS/JS，自包含可运行"],
+    ["rev",     "🔍 Mike（评审）：代码审查 + 安全扫描…"],
+    ["rev-ok",  "   ✓ 修复 1 处 XSS 风险 · 安全评分 92/100"],
+    ["done",    "🚀 应用已就绪，正在沙箱中渲染预览…"]
+  ];
+  const term = document.getElementById("termBody");
+  let li = 0;
+  function nextLine() {
+    if (li >= lines.length) {
+      setTimeout(() => { term.textContent = ""; li = 0; nextLine(); }, 3200);
+      return;
+    }
+    const [cls, text] = lines[li];
+    const div = document.createElement("div");
+    div.className = "tl " + cls;
+    div.textContent = text;
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+    li++;
+    setTimeout(nextLine, cls.endsWith("-ok") ? 500 : 900);
+  }
+  nextLine();
+
+  // ---- reveal on scroll ----
+  const io = new IntersectionObserver((es) => {
+    es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll(".sec .glass").forEach((el) => { el.classList.add("reveal"); io.observe(el); });
+})();
+</script>
 </body>
 </html>

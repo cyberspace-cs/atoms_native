@@ -206,10 +206,31 @@ a.ghost{text-decoration:none;display:inline-flex;align-items:center}
 /* ===== GALLERY EMPTY ===== */
 .empty{padding:18px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:1.7;background:rgba(255,255,255,.02);border:1px dashed var(--glass-brd);border-radius:12px}
 
+/* ===== PROGRESS BAR ===== */
+.pbar{margin-top:12px;height:6px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.pbar i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--cyan));transition:width .6s cubic-bezier(.4,0,.2,1);box-shadow:0 0 12px rgba(91,140,255,.6)}
+
 @media(max-width:1100px){
   .layout{grid-template-columns:1fr;overflow:auto}
   body{overflow:auto}
   #main{height:auto;min-height:100vh}
+}
+
+/* ===== MOBILE ===== */
+@media(max-width:700px){
+  .topbar{flex-wrap:wrap;gap:8px;padding:8px 12px}
+  .topbar .user{flex-wrap:wrap}
+  .brand.sm span{font-size:13px}
+  .layout{grid-template-columns:1fr;padding:8px;gap:8px}
+  .idea-card .row{flex-wrap:wrap}
+  .model-sel{max-width:100%;flex:1}
+  .prev-actions{flex-wrap:wrap;justify-content:flex-end}
+  .sec-popover{width:min(300px,calc(100vw - 40px));right:8px}
+  .stream{max-height:220px}
+  .chat{max-height:140px}
+  .device.mobile #preview{width:100%;border-radius:12px}
+  .phases{flex-wrap:wrap}
+  .phase:not(:last-child)::after{display:none}
 }
 
 /* ===== PREVIEW CARD anchor for popovers ===== */

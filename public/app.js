@@ -66,6 +66,7 @@
   function resetPhases() {
     document.querySelectorAll(".phase").forEach((el) => el.classList.remove("active", "done"));
     const st = $("phaseStatus"); if (st) st.textContent = "待开始";
+    const fill = $("pbarFill"); if (fill) fill.style.width = "0%";
   }
   function markPhase(agent) {
     const idx = PHASE_ORDER.indexOf(agent);
@@ -77,6 +78,8 @@
     });
     const st = $("phaseStatus");
     if (st) st.textContent = agent === "done" ? "已完成" : PHASE_LABELS[idx];
+    const fill = $("pbarFill");
+    if (fill) fill.style.width = Math.round((idx / (PHASE_ORDER.length - 1)) * 100) + "%";
   }
   function highlightTeam(agent) {
     document.querySelectorAll(".team .member").forEach((el) =>

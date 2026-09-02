@@ -255,10 +255,6 @@ def refine(req: RefineReq, user=Depends(require_user),
         raise HTTPException(status_code=404, detail="项目不存在")
     if not p["current_version"]:
         raise HTTPException(status_code=400, detail="请先生成初始版本")
-    if user["id"] in _active:
-        raise HTTPException(status_code=429, detail="你有一个生成任务正在进行中，请稍候")
-    if not _rate_ok(user["id"]):
-        raise HTTPException(status_code=429, detail="操作过于频繁，请稍后再试")
     conn = get_conn()
     v = conn.execute("SELECT code FROM versions WHERE id=?", (p["current_version"],)).fetchone()
     conn.close()
@@ -311,8 +307,6 @@ def race(req: RaceReq, user=Depends(require_user),
     p = _get_project(req.project_id, user)
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
-    if user["id"] in _active:
-        raise HTTPException(status_code=429, detail="你有一个生成任务正在进行中，请稍候")
     if not rl.acquire(user["id"]):
         raise HTTPException(status_code=429, detail="你有一个生成任务正在进行中，请稍候")
     r = rl.allow(user["id"], "race")
