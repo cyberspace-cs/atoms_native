@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atoms Native · AI 团队 — 四位智能体</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    body{min-height:100vh;background:radial-gradient(1200px 800px at 20% -10%,rgba(91,140,255,.16),transparent 60%),radial-gradient(1000px 700px at 110% 20%,rgba(155,107,255,.13),transparent 55%),var(--bg,#0b1020);color:var(--txt,#e8ecf8);font-family:inherit}
+    .wrap{max-width:1060px;margin:0 auto;padding:48px 24px 64px}
+    .back{display:inline-flex;align-items:center;gap:6px;color:var(--muted,#9aa7c7);font-size:13px;text-decoration:none;margin-bottom:28px}
+    .back:hover{color:var(--txt,#e8ecf8)}
+    h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}
+    h1 b{background:linear-gradient(135deg,var(--accent,#5b8cff),var(--accent2,#9b6bff));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .sub{color:var(--muted,#9aa7c7);font-size:14px;line-height:1.7;margin-bottom:36px;max-width:620px}
+    .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+    .member-card{background:var(--glass,rgba(255,255,255,.04));border:1px solid var(--glass-brd,rgba(255,255,255,.1));border-radius:16px;padding:20px;transition:transform .2s,border-color .2s}
+    .member-card:hover{transform:translateY(-3px);border-color:rgba(91,140,255,.45)}
+    .member-card .avatar{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;background:linear-gradient(135deg,rgba(91,140,255,.2),rgba(155,107,255,.2));margin-bottom:12px}
+    .member-card h2{font-size:16px;margin:0 0 2px}
+    .member-card .role{font-size:12px;color:var(--cyan,#69d2ff);margin-bottom:10px}
+    .member-card p{font-size:12.5px;color:var(--muted,#9aa7c7);line-height:1.75;margin:0}
+    .flow{margin-top:40px;background:var(--glass,rgba(255,255,255,.04));border:1px solid var(--glass-brd,rgba(255,255,255,.1));border-radius:16px;padding:22px}
+    .flow h3{font-size:15px;margin:0 0 14px}
+    .flow ol{margin:0;padding-left:20px;color:var(--muted,#9aa7c7);font-size:13px;line-height:2}
+    .flow b{color:var(--txt,#e8ecf8)}
+    @media(max-width:700px){.wrap{padding:32px 16px}}
+    :focus-visible{outline:2px solid var(--accent,#5b8cff);outline-offset:2px;border-radius:6px}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <a class="back" href="./studio.html">← 返回工作台</a>
+    <h1>🤖 AI 开发小队 <b>四位智能体</b></h1>
+    <p class="sub">你的一句话说出口后，这支小队就开工了。四个角色各司其职、流水线协作，全程 SSE 直播——每一步做了什么、说了什么，你都能在工作台实时看到。</p>
+
+    <div class="team-grid">
+      <div class="member-card">
+        <div class="avatar">📋</div>
+        <h2>Emma</h2>
+        <div class="role">产品经理 · 需求规格</div>
+        <p>听懂你的想法，把它翻译成结构化的产品规格：功能清单、页面结构、数据模型。她的输出是全队的施工图纸。</p>
+      </div>
+      <div class="member-card">
+        <div class="avatar">🏗️</div>
+        <h2>Bob</h2>
+        <div class="role">架构师 · 系统设计</div>
+        <p>根据规格做技术选型与模块划分，决定数据怎么存、交互怎么串，保证应用「生出来就能跑」，而不是看起来能跑。</p>
+      </div>
+      <div class="member-card">
+        <div class="avatar">⚙️</div>
+        <h2>Alex</h2>
+        <div class="role">工程师 · 构建应用</div>
+        <p>把图纸变成一个自包含的单文件 HTML 应用：样式、交互、数据持久化一体成型，交付前会做合法性自检。</p>
+      </div>
+      <div class="member-card">
+        <div class="avatar">🔍</div>
+        <h2>Mike</h2>
+        <div class="role">评审 · 质量把关</div>
+        <p>对照需求逐条验收 Alex 的产出，发现问题就地打回；生成结束后还有独立的 OWASP LLM Top 10 安全扫描与打分。</p>
+      </div>
+    </div>
+
+    <div class="flow">
+      <h3>🧭 他们是怎么协作的</h3>
+      <ol>
+        <li><b>需求</b> — Emma 把你的想法整理成产品规格（直播可见）</li>
+        <li><b>架构</b> — Bob 出模块与数据设计</li>
+        <li><b>工程</b> — Alex 写出完整可运行的单文件应用，可多模型并行竞速（Race Mode）</li>
+        <li><b>评审</b> — Mike 验收 + 安全扫描打分，通过后交付</li>
+        <li><b>迭代</b> — 应用生成后，你继续用一句话精修，小队基于上一版增量修改，版本历史随时回滚</li>
+      </ol>
+    </div>
+  </div>
+</body>
+
+</html>
