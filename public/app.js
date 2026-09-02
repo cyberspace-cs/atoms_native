@@ -151,17 +151,41 @@
   }
 
   // ---------- preview ----------
-  function injectShim(html) {
-    const shim = '<script>(function(){try{if(window.localStorage)return;}catch(e){}var m={};window.localStorage={getItem:function(k){return k in m?m[k]:null;},setItem:function(k,v){m[k]=String(v);},removeItem:function(k){delete m[k];},clear:function(){m={};}};})();<\/script>';
+  // 沙箱垫片：iframe 无 allow-same-origin 时访问 localStorage 会抛 SecurityError。
+  // 注意：window.localStorage 是 getter-only 访问器，直接赋值会被静默忽略（存量 bug），
+  // 必须用 Object.defineProperty 以自身属性遮蔽原型访问器。变更经 postMessage
+  // 回传父页面落库（P0），重开项目时通过 __AN_BOOT__ 恢复上次数据。
+  function injectShim(html, boot) {
+    let bootJson = "{}";
+    try { bootJson = JSON.stringify(boot || {}).replace(/</g, "\\u003c"); } catch (e) {}
+    const shim = '<script>window.__AN_BOOT__=' + bootJson + ';(function(){var m={};for(var k in window.__AN_BOOT__){m[k]=String(window.__AN_BOOT__[k]);}var t=null;function report(){if(t)clearTimeout(t);t=setTimeout(function(){try{window.parent.postMessage({type:"an_sandbox_state",data:m},"*");}catch(e){}},600);}var native=false;try{if(window.localStorage)native=true;}catch(e){}if(native)return;var shimObj={getItem:function(k){return k in m?m[k]:null;},setItem:function(k,v){m[k]=String(v);report();},removeItem:function(k){delete m[k];report();},clear:function(){m={};report();}};try{Object.defineProperty(window,"localStorage",{value:shimObj,writable:false,configurable:false});}catch(e){}})();<\/script>';
     if (html.indexOf("<head") >= 0) return html.replace("<head>", "<head>" + shim);
     return shim + html;
   }
-  function setPreview(code) {
+  function setPreview(code, boot) {
     const f = $("preview");
     if (!code) return;
-    f.srcdoc = injectShim(code);
+    f.srcdoc = injectShim(code, boot);
     state.code = code;
     $("frameEmpty").style.display = "none";
+  }
+  // 接收预览 iframe 回传的数据快照，节流落库
+  window.addEventListener("message", (e) => {
+    if (!state.current) return;
+    if (e.source !== $("preview").contentWindow) return;
+    const d = e.data;
+    if (!d || d.type !== "an_sandbox_state" || typeof d.data !== "object") return;
+    state._pendingState = d.data;
+    clearTimeout(state._stateTimer);
+    state._stateTimer = setTimeout(saveSandboxState, 800);
+  });
+  async function saveSandboxState() {
+    if (!state.current || !state._pendingState) return;
+    try {
+      await api("POST", "/projects/" + state.current + "/state", {
+        state: JSON.stringify(state._pendingState),
+      });
+    } catch (e) {}
   }
 
   // ---------- event router ----------
@@ -226,7 +250,9 @@
       const b = $("secBadge"); if (b) b.classList.add("hidden");
       state.securityScore = null; state.securityFindings = null; state.securitySummary = null;
     }
-    setPreview(d.current_code || "");
+    let boot = {};
+    if (d.app_state) { try { boot = JSON.parse(d.app_state); } catch (e) {} }
+    setPreview(d.current_code || "", boot);
     renderMessages(d.messages || []);
     highlightGallery(d.project.id);
     resetFeedback();

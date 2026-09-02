@@ -154,7 +154,41 @@ def get_project(pid: int, user=Depends(require_user)):
         "versions": [dict(v) for v in versions],
         "messages": [dict(m) for m in messages],
         "current_code": cur_code,
+        "app_state": p["app_state"] or "",
     }
+
+
+@app.get("/api/projects/{pid}/state")
+def get_project_state(pid: int, user=Depends(require_user)):
+    """读取生成应用的沙箱数据快照（垫片恢复用）"""
+    if not _get_project(pid, user):
+        raise HTTPException(status_code=404, detail="项目不存在")
+    conn = get_conn()
+    row = conn.execute("SELECT app_state FROM projects WHERE id=?", (pid,)).fetchone()
+    conn.close()
+    return {"state": row["app_state"] or ""}
+
+
+@app.post("/api/projects/{pid}/state")
+def save_project_state(pid: int, body: dict, request: Request, user=Depends(require_user)):
+    """保存预览 iframe 回传的 localStorage 快照（仅存 JSON，不执行任何应用代码）"""
+    if not _get_project(pid, user):
+        raise HTTPException(status_code=404, detail="项目不存在")
+    s = body.get("state") if isinstance(body, dict) else None
+    if not isinstance(s, str):
+        raise HTTPException(status_code=422, detail="state 必须为字符串")
+    if len(s.encode("utf-8")) > 256 * 1024:
+        raise HTTPException(status_code=413, detail="状态超过 256KB 上限")
+    conn = get_conn()
+    conn.execute(
+        "UPDATE projects SET app_state=?, updated_at=datetime('now') WHERE id=?",
+        (s, pid),
+    )
+    conn.commit()
+    conn.close()
+    log_audit(user["id"], "save_project_state", f"project:{pid}", f"bytes={len(s)}",
+              source_ip=request.client.host if request.client else None)
+    return {"ok": True}
 
 
 @app.delete("/api/projects/{pid}")

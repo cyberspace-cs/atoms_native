@@ -5,6 +5,7 @@
 这是为 **AI Native 全栈工程师岗位笔试** 提交的 Atoms Demo。
 
 > **在线演示**：`https://taoxie.vip/atoms-native/`（官网首页）· `https://taoxie.vip/atoms-native/studio.html`（工作台）
+> **演示账号**：`demo` / `demo123456`（含预置项目，可直接打开体验，无需注册）
 > 无 LLM Key 时自动进入「离线模板模式」，全链路仍可演示；配置 Key 后为真实大模型生成。
 
 ---

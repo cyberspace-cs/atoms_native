@@ -128,6 +128,11 @@ def init_db():
         conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
     except Exception:
         pass
+    try:
+        # 生成应用沙箱数据落库（P0）：预览 iframe 经 postMessage 回传的 localStorage 快照
+        conn.execute("ALTER TABLE projects ADD COLUMN app_state TEXT")
+    except Exception:
+        pass
     for tbl, ddl in (
         ("audit_log", """CREATE TABLE IF NOT EXISTS audit_log(
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, action TEXT NOT NULL,
