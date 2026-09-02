@@ -12,7 +12,7 @@
       headers: { "Content-Type": "application/json", ...authHeader() },
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) { let m = ""; try { m = await res.text(); } catch (e) {} throw new Error(m || res.status); }
+    if (!res.ok) { let m = ""; try { m = await res.text(); } catch (e) { } throw new Error(m || res.status); }
     return res.json();
   }
   let toastTimer;
@@ -101,7 +101,7 @@
       headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify(body),
     });
-    if (!res.ok) { let m = ""; try { m = await res.text(); } catch (e) {} throw new Error(m || res.status); }
+    if (!res.ok) { let m = ""; try { m = await res.text(); } catch (e) { } throw new Error(m || res.status); }
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = "";
@@ -113,7 +113,7 @@
       while ((idx = buf.indexOf("\n\n")) >= 0) {
         const chunk = buf.slice(0, idx); buf = buf.slice(idx + 2);
         const line = chunk.split("\n").find((l) => l.startsWith("data: "));
-        if (line) { try { onEvent(JSON.parse(line.slice(6))); } catch (e) {} }
+        if (line) { try { onEvent(JSON.parse(line.slice(6))); } catch (e) { } }
       }
     }
   }
@@ -157,7 +157,7 @@
   // 回传父页面落库（P0），重开项目时通过 __AN_BOOT__ 恢复上次数据。
   function injectShim(html, boot) {
     let bootJson = "{}";
-    try { bootJson = JSON.stringify(boot || {}).replace(/</g, "\\u003c"); } catch (e) {}
+    try { bootJson = JSON.stringify(boot || {}).replace(/</g, "\\u003c"); } catch (e) { }
     const shim = '<script>window.__AN_BOOT__=' + bootJson + ';(function(){var m={};for(var k in window.__AN_BOOT__){m[k]=String(window.__AN_BOOT__[k]);}var t=null;function report(){if(t)clearTimeout(t);t=setTimeout(function(){try{window.parent.postMessage({type:"an_sandbox_state",data:m},"*");}catch(e){}},600);}var native=false;try{if(window.localStorage)native=true;}catch(e){}if(native)return;var shimObj={getItem:function(k){return k in m?m[k]:null;},setItem:function(k,v){m[k]=String(v);report();},removeItem:function(k){delete m[k];report();},clear:function(){m={};report();}};try{Object.defineProperty(window,"localStorage",{value:shimObj,writable:false,configurable:false});}catch(e){}})();<\/script>';
     if (html.indexOf("<head") >= 0) return html.replace("<head>", "<head>" + shim);
     return shim + html;
@@ -185,7 +185,7 @@
       await api("POST", "/projects/" + state.current + "/state", {
         state: JSON.stringify(state._pendingState),
       });
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // ---------- event router ----------
@@ -251,7 +251,7 @@
       state.securityScore = null; state.securityFindings = null; state.securitySummary = null;
     }
     let boot = {};
-    if (d.app_state) { try { boot = JSON.parse(d.app_state); } catch (e) {} }
+    if (d.app_state) { try { boot = JSON.parse(d.app_state); } catch (e) { } }
     setPreview(d.current_code || "", boot);
     renderMessages(d.messages || []);
     highlightGallery(d.project.id);
@@ -261,7 +261,7 @@
     try {
       const d = await api("GET", "/projects/" + id);
       await applyProjectData(d);
-    } catch (e) {}
+    } catch (e) { }
     await loadProjects();
   }
 
@@ -338,7 +338,8 @@
     try {
       await streamPost("./api/refine", { project_id: state.current, message: msg, model: $("modelSel").value || null }, onEvent);
       $("refineInput").value = "";
-    } catch (e) { toast("精修失败：" + e.message); setBusy(false); }
+    } catch (e) { toast("精修失败：" + e.message); markAllStopped(); }
+    finally { setBusy(false); }
   }
   async function doRace() {
     if (!state.current) { toast("请先生成或打开一个项目"); return; }
@@ -346,7 +347,8 @@
     if (!models.length) models = ["deepseek"];
     setBusy(true); resetStream();
     try { await streamPost("./api/race", { project_id: state.current, models }, onEvent); }
-    catch (e) { toast("Race 失败：" + e.message); setBusy(false); }
+    catch (e) { toast("Race 失败：" + e.message); markAllStopped(); }
+    finally { setBusy(false); }
   }
   async function doExport() {
     if (!state.current) { toast("没有可导出的项目"); return; }
