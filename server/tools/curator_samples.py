@@ -94,7 +94,8 @@ def main():
     for it in items:
         print(f"-> [{it['id']}] {it['title']}")
         s, p = call("POST", "/api/projects", token=token, data={"title": it["title"], "idea": it["idea"]})
-        pid = p.get("project_id") or p.get("id")
+        proj = p.get("project") if isinstance(p.get("project"), dict) else p
+        pid = proj.get("project_id") or proj.get("id")
         if not pid:
             print("  create failed:", s, p)
             continue
