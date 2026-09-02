@@ -69,12 +69,12 @@
         <!-- studio -->
         <section class="studio">
           <div class="idea-card glass">
-            <label>描述你的想法，让智能体团队开始工作 🚀</label>
+            <label>一句话，让 AI 团队开工 🚀</label>
             <textarea id="idea" rows="3" placeholder="例如：一个帮团队管理每日饮水与目标打卡的小工具，带统计图表"></textarea>
             <div class="row">
               <button id="genBtn" class="primary">⚡ 生成应用</button>
               <select id="modelSel" class="model-sel" title="选择生成使用的模型（免费优先）"></select>
-              <span class="tip" id="genTip">PM → 架构 → 工程 → 评审，四步成应用</span>
+              <span class="tip" id="genTip">PM → 架构 → 工程 → 评审，全程直播</span>
             </div>
             <div id="templates" class="templates"></div>
           </div>
@@ -95,29 +95,16 @@
             <div class="pbar"><i id="pbarFill"></i></div>
           </div>
 
-          <div class="team-card glass">
-            <div class="card-head"><span>🤖 AI 团队</span><span class="tip">多智能体协作</span></div>
-            <div id="team" class="team">
-              <div class="member" data-agent="PM"><span class="mic">📋</span><b>Emma</b><small>产品经理 · 需求规格</small></div>
-              <div class="member" data-agent="Architect"><span class="mic">🏗️</span><b>Bob</b><small>架构师 · 系统设计</small>
-              </div>
-              <div class="member" data-agent="Engineer"><span class="mic">⚙️</span><b>Alex</b><small>工程师 · 构建应用</small>
-              </div>
-              <div class="member" data-agent="Reviewer"><span class="mic">🔍</span><b>Mike</b><small>评审 · 质量把关</small>
-              </div>
-            </div>
-          </div>
-
           <div class="stream-card glass">
             <div class="card-head"><span>🧠 智能体工作台</span><span id="streamStatus" class="status">空闲</span></div>
             <div id="stream" class="stream"></div>
           </div>
 
-          <div class="race-card glass">
-            <div class="card-head"><span>🏁 Race Mode · 多模型择优</span></div>
+          <details class="race-card glass">
+            <summary>🏁 Race Mode · 多模型同题竞技（点开使用）</summary>
             <div id="modelList" class="models"></div>
             <button id="raceBtn" class="secondary">并行跑多个模型，评审打分选最优</button>
-          </div>
+          </details>
         </section>
 
         <!-- preview + refine -->
