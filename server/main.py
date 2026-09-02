@@ -268,6 +268,7 @@ def generate(req: GenerateReq, user=Depends(require_user),
                     final = e.value or {}
                     break
                 yield _sse(ev)
+                rl.renew(user["id"])  # 锁续期：进程被杀时 TTL 自愈，正常任务不过期
             sec = final.get("security", {}).get("score")
             # persist
             vno = _next_version(p["id"])
@@ -324,6 +325,7 @@ def refine(req: RefineReq, user=Depends(require_user),
                     final = e.value or {}
                     break
                 yield _sse(ev)
+                rl.renew(user["id"])  # 锁续期
             _save_message(p["id"], "user", req.message)
             sec = final.get("security", {}).get("score")
             vno = _next_version(p["id"])
@@ -371,6 +373,7 @@ def race(req: RaceReq, user=Depends(require_user),
                     final = e.value or {}
                     break
                 yield _sse(ev)
+                rl.renew(user["id"])  # 锁续期
             # persist each candidate as a version
             mapping = {}
             conn = get_conn()

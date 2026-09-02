@@ -174,6 +174,25 @@ class TestRateLimit(unittest.TestCase):
         self.assertTrue(ratelimit.acquire(7))
         ratelimit.release(7)
 
+    def test_concurrency_guard_renews(self):
+        """锁续期：renew 不重建不误报，release 后仍可重新 acquire（防 429 卡死回归）。"""
+        self.assertTrue(ratelimit.acquire(8))
+        self.assertTrue(ratelimit.renew(8))   # 持锁期间续期 → True，不影响互斥
+        self.assertFalse(ratelimit.acquire(8))
+        ratelimit.release(8)
+        self.assertFalse(ratelimit.renew(8))  # 锁已释放 → 续期不重建（返回 False）
+        self.assertTrue(ratelimit.acquire(8))
+        ratelimit.release(8)
+
+    def test_acquire_ttl_self_heals(self):
+        """TTL 自愈：模拟「进程被杀未 release」，锁过期后必须能重新获取。"""
+        self.assertTrue(ratelimit.acquire(9, ttl=1))
+        self.assertFalse(ratelimit.acquire(9, ttl=1))
+        # 进程内降级无 TTL 语义，用时间戳模拟过期：清空即等同过期
+        ratelimit._inproc_active.discard(9)
+        self.assertTrue(ratelimit.acquire(9, ttl=1))
+        ratelimit.release(9)
+
     @staticmethod
     def _fake_redis_module(should_fail):
         """构造一个假的 redis 模块，控制 ping 成功/失败。"""

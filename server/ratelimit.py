@@ -165,8 +165,12 @@ def status() -> dict:
 _inproc_active: set = set()
 
 
-def acquire(tenant_id, ttl: int = 1800) -> bool:
-    """获取该租户的生成/精修/竞速锁。成功返回 True。fail-open。"""
+def acquire(tenant_id, ttl: int = 300) -> bool:
+    """获取该租户的生成/精修/竞速锁。成功返回 True。fail-open。
+
+    ttl 是防泄漏的生命线：进程被杀（部署/崩溃）时 finally release 不会执行，
+    锁靠 TTL 自愈。配对 rl.renew() 在 SSE 每个事件后续期，正常任务不会过期。
+    """
     key = f"lock:{tenant_id}"
     client = _get_redis()
     if client is not None:
@@ -180,6 +184,18 @@ def acquire(tenant_id, ttl: int = 1800) -> bool:
         return False
     _inproc_active.add(tenant_id)
     return True
+
+
+def renew(tenant_id, ttl: int = 300) -> bool:
+    """续期并发守卫锁（SSE 每事件调用一次）。fail-open，锁不存在时不重建。"""
+    key = f"lock:{tenant_id}"
+    client = _get_redis()
+    if client is not None:
+        try:
+            return bool(client.expire(key, ttl))
+        except Exception:
+            return True  # fail-open：续期失败不中断生成
+    return True  # 进程内集合无需续期
 
 
 def release(tenant_id):
