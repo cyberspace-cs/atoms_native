@@ -166,7 +166,7 @@ docker compose up -d --build  # http://localhost:8088
 - [x] 无 key 离线模板降级（诚实标注 mock，杜绝「假成功」）
 - [x] 生产化：分布式限流、SAST 安全扫描、SOC 2 审计、可观测看板（admin.html）
 - [x] 摩擦信号 + 评估集 + CI 评估门禁
-- [x] 单元测试 30 项 + 端到端 smoke 12 项
+- [x] 单元测试 35 项 + 端到端 smoke 12 项
 
 **未做（时间/范围控制，见扩展）**
 - [ ] 真实 Stripe 支付 / 多租户企业权限
@@ -220,7 +220,7 @@ Atoms_Native/
 │   │   └── race.py       # 多模型并行择优
 │   └── .env.example
 ├── public/          # 前端（index.html=官网首页 / studio.html=工作台 / admin.html 看板 / landing.css）
-├── tests/           # unit_tests.py（30 项单测）+ smoke.py（12 项端到端）
+├── tests/           # unit_tests.py（35 项单测）+ smoke.py（12 项端到端）
 ├── .github/workflows/ci.yml  # CI: compileall + smoke + 评估门禁
 ├── Dockerfile / docker-compose.yml / nginx-atoms-native.conf
 └── README.md

@@ -18,6 +18,7 @@ import sys
 import tempfile
 import types
 import unittest
+from pathlib import Path
 from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -331,6 +332,58 @@ class TestFriction(unittest.TestCase):
                                side_effect=RuntimeError("db down")):
             self.assertIsNone(self.friction.record(904, "llm_error", "x"))
             self.assertEqual(self.friction.score(project_id=905)["score"], 0)
+
+
+class TestPlanVersions(unittest.TestCase):
+    """产品方案版本发展历史：索引解析 + 快照读取 + 路径穿越防护。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.pv = load("plan_versions", os.path.join(SERVER, "plan_versions.py"))
+
+    def test_list_versions_parses_index(self):
+        """索引表解析：至少含 v1.0，时间倒序（最新在上），字段干净。"""
+        vs = self.pv.list_versions()
+        self.assertTrue(vs, "索引表应至少解析出一个版本")
+        v0 = vs[0]
+        self.assertRegex(v0["version"], r"^v[\w.\-]+$")
+        self.assertRegex(v0["date"], r"^\d{4}-\d{2}-\d{2}$")
+        self.assertTrue(v0["topic"])
+        self.assertTrue(v0["summary"])
+        self.assertTrue(v0["snapshot"])
+        # 仓库初版基线始终在历史中；最新版本随迭代演进（时间倒序已验证）
+        self.assertIn("v1.0", {v["version"] for v in vs})
+        # 时间倒序：日期单调不增
+        dates = [v["date"] for v in vs]
+        self.assertEqual(dates, sorted(dates, reverse=True))
+
+    def test_read_snapshot_returns_markdown(self):
+        vs = self.pv.list_versions()
+        text = self.pv.read_snapshot(vs[0]["snapshot"])
+        self.assertIsNotNone(text)
+        self.assertIn("核心概念", text)
+
+    def test_read_snapshot_missing_returns_none(self):
+        self.assertIsNone(self.pv.read_snapshot("产品方案_v9.9_2099-01-01_不存在.md"))
+        self.assertIsNone(self.pv.read_snapshot("no-such-file.md"))
+
+    def test_path_traversal_blocked(self):
+        """OWASP：../ 穿越、绝对路径、目录分隔符一律拒绝。"""
+        for evil in [
+            "../版本发展历史.md",
+            "..\\版本发展历史.md",
+            "产品方案_v1.0_2026-09-02_初版.md/../../main.py",
+            "sub/../产品方案_v1.0_2026-09-02_初版.md",
+            "/etc/passwd",
+            "产品方案_v1.0_2026-09-02_初版.md%00.png",
+        ]:
+            self.assertIsNone(self.pv.snapshot_path(evil), f"应拒绝: {evil}")
+            self.assertIsNone(self.pv.read_snapshot(evil), f"应拒绝: {evil}")
+
+    def test_list_versions_never_raises(self):
+        """索引文件损坏/缺失时返回空列表，不抛异常。"""
+        with mock.patch.object(self.pv, "PLAN_DIR", Path(self.pv.REPO_ROOT / "docs" / "__nope__")):
+            self.assertEqual(self.pv.list_versions(), [])
 
 
 if __name__ == "__main__":

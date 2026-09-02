@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, Response
+from fastapi.responses import StreamingResponse, JSONResponse, Response, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import HOST, PORT, RATE_LIMIT
@@ -39,6 +39,9 @@ import ratelimit as rl
 
 # ---- 摩擦信号（server/friction.py）：识别「你和 AI 搏斗过」的会话并建议沉淀经验 ----
 import friction
+
+# ---- 产品方案版本发展历史（server/plan_versions.py）：文档版本化的可编程数据源 ----
+import plan_versions as pv
 
 
 def _audit_ctx(request: Request | None, authorization: str | None):
@@ -538,6 +541,23 @@ def feedback(body: dict, user=Depends(require_user),
     log_audit(user["id"], "feedback", f"project:{pid}", f"rating:{rating}",
               source_ip=ip, session_id=sid)
     return {"ok": True, "id": fid}
+
+
+# ---------------- Product plan version history (public) ----------------
+
+@app.get("/api/plan/versions")
+def plan_versions():
+    """产品方案版本发展历史：索引表解析结果，时间倒序（最新在上）。公开接口。"""
+    return {"versions": pv.list_versions()}
+
+
+@app.get("/api/plan/versions/{name}")
+def plan_snapshot(name: str):
+    """读取指定版本快照的 markdown 原文。文件名白名单校验，防路径穿越。"""
+    text = pv.read_snapshot(name)
+    if text is None:
+        raise HTTPException(status_code=404, detail="版本快照不存在")
+    return PlainTextResponse(text, media_type="text/markdown; charset=utf-8")
 
 
 # ---------------- SOC 2 Audit (admin) ----------------
