@@ -124,9 +124,11 @@ css = (PUBLIC / "styles.css").read_text(encoding="utf-8")
 for cls in (".status.busy", ".agent.running", ".toast.show", "details.race-card"):
     check(f"C4 样式类存在: {cls}", cls in css)
 
-# ---------- D. 结构守卫（防编辑器旧缓冲把结构改回去） ----------
+# ---------- D. 结构守卫（防编辑器旧缓冲把结构改回去；空白容忍，容忍格式化折行） ----------
 check("D1 studio.html 主区无 team-card（团队详情移至 team.html）", "team-card" not in studio)
-check("D2 studio.html Race 为 details 折叠面板", 'details class="race-card"' in studio)
+check("D2 studio.html Race 为 details 折叠面板",
+      bool(re.search(r'<details\s+class="race-card', studio))
+      and "raceBtn" in studio)
 team_html = (PUBLIC / "team.html").read_text(encoding="utf-8")
 check("D3 team.html 存在且含四位成员卡", team_html.count('class="member-card"') == 4)
 check("D4 studio.html 有 AI 团队入口链接", 'href="./team.html"' in studio)
