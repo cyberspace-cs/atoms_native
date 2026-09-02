@@ -10,6 +10,7 @@ dist/
 
 # local scratch / dev artifacts (CI uses tests/smoke.py instead)
 _*.log
+*.log
 _*.py
 _*.json
 _bench_apps/
