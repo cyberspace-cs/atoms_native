@@ -116,6 +116,17 @@ def init_db():
             detail TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
+        CREATE TABLE IF NOT EXISTS discover_items(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            idea TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT '工具',
+            author TEXT NOT NULL DEFAULT 'Atoms 团队',
+            emoji TEXT NOT NULL DEFAULT '✨',
+            views INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
         """
     )
     # 迁移：对已有库补齐新增列（ALTER 失败即说明已存在，忽略）

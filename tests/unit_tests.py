@@ -299,6 +299,7 @@ class TestFriction(unittest.TestCase):
         cls._tmpdir = tempfile.TemporaryDirectory()
         config.DB_PATH = os.path.join(cls._tmpdir.name, "friction_test.db")
         import database
+        database.DB_PATH = config.DB_PATH  # database 在导入时绑定 DB_PATH，需同步
         database.init_db()
         cls.friction = load("friction", os.path.join(SERVER, "friction.py"))
 
@@ -384,6 +385,69 @@ class TestPlanVersions(unittest.TestCase):
         """索引文件损坏/缺失时返回空列表，不抛异常。"""
         with mock.patch.object(self.pv, "PLAN_DIR", Path(self.pv.REPO_ROOT / "docs" / "__nope__")):
             self.assertEqual(self.pv.list_versions(), [])
+
+
+class TestDiscover(unittest.TestCase):
+    """发现与模板：惰性种子、浏览量、一键建项目、异常容错。"""
+
+    @classmethod
+    def setUpClass(cls):
+        import config
+        cls._tmpdir = tempfile.TemporaryDirectory()
+        config.DB_PATH = os.path.join(cls._tmpdir.name, "discover_test.db")
+        import database
+        database.DB_PATH = config.DB_PATH  # database 在导入时绑定 DB_PATH，需同步
+        database.init_db()
+        cls.disc = load("discover", os.path.join(SERVER, "discover.py"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmpdir.cleanup()
+
+    def test_seed_and_list(self):
+        self.disc.ensure_seed()
+        items = self.disc.list_items()
+        self.assertGreaterEqual(len(items), 8)
+        # 惰性种子幂等：再灌一次不重复
+        self.disc.ensure_seed()
+        self.assertEqual(len(self.disc.list_items()), len(items))
+        # 字段完整：idea 可直接作为生成输入
+        for it in items:
+            self.assertTrue(it["title"] and it["idea"] and it["category"])
+
+    def test_add_view(self):
+        self.disc.ensure_seed()
+        items = self.disc.list_items()
+        before = items[-1]["views"]
+        self.assertTrue(self.disc.add_view(items[-1]["id"]))
+        after = [i for i in self.disc.list_items() if i["id"] == items[-1]["id"]][0]["views"]
+        self.assertEqual(after, before + 1)
+        self.assertFalse(self.disc.add_view(99999))
+
+    def test_use_template_creates_project(self):
+        import database
+        conn = database.get_conn()
+        conn.execute("INSERT INTO users(username,password_hash,salt) VALUES('disc_u','x','s')")
+        conn.commit()
+        uid = conn.execute("SELECT id FROM users WHERE username='disc_u'").fetchone()["id"]
+        conn.close()
+        item = self.disc.list_items()[0]
+        pid = self.disc.use_template(item["id"], uid)
+        self.assertIsNotNone(pid)
+        conn = database.get_conn()
+        row = conn.execute("SELECT user_id,title,idea FROM projects WHERE id=?", (pid,)).fetchone()
+        conn.close()
+        self.assertEqual(row["user_id"], uid)
+        self.assertEqual(row["idea"], item["idea"])
+        # 模板不存在 → None
+        self.assertIsNone(self.disc.use_template(99999, uid))
+
+    def test_never_raises_on_db_error(self):
+        with mock.patch.object(self.disc.database, "get_conn",
+                               side_effect=RuntimeError("db down")):
+            self.assertEqual(self.disc.list_items(), [])
+            self.assertFalse(self.disc.add_view(1))
+            self.assertIsNone(self.disc.use_template(1, 1))
 
 
 if __name__ == "__main__":

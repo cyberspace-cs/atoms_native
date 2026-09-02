@@ -43,6 +43,9 @@ import friction
 # ---- 产品方案版本发展历史（server/plan_versions.py）：文档版本化的可编程数据源 ----
 import plan_versions as pv
 
+# ---- 发现与模板（server/discover.py）：对齐 atoms.dev 的社区发现页，降低冷启动门槛 ----
+import discover as disc
+
 
 def _audit_ctx(request: Request | None, authorization: str | None):
     """从 Request/Header 提取 SOC 2 审计所需的 source_ip 与 session_id。"""
@@ -558,6 +561,34 @@ def plan_snapshot(name: str):
     if text is None:
         raise HTTPException(status_code=404, detail="版本快照不存在")
     return PlainTextResponse(text, media_type="text/markdown; charset=utf-8")
+
+
+# ---------------- Discover / Templates (public) ----------------
+
+@app.get("/api/discover")
+def discover_list():
+    """发现页：社区精选模板，按浏览量倒序。公开接口，惰性种子。"""
+    disc.ensure_seed()
+    return {"items": disc.list_items()}
+
+
+@app.post("/api/discover/{item_id}/view")
+def discover_view(item_id: int):
+    """浏览量 +1（fire-and-forget）。"""
+    return {"ok": disc.add_view(item_id)}
+
+
+@app.post("/api/discover/{item_id}/use")
+def discover_use(item_id: int, user=Depends(require_user),
+                request: Request = None, authorization: str | None = Header(default=None)):
+    """一键把模板变成自己的项目（复制 idea 建项目，回工作台即可生成）。"""
+    pid = disc.use_template(item_id, user["id"])
+    if pid is None:
+        raise HTTPException(status_code=404, detail="模板不存在")
+    ip, sid = _audit_ctx(request, authorization)
+    log_audit(user["id"], "discover_use", f"project:{pid}", f"template:{item_id}",
+              source_ip=ip, session_id=sid)
+    return {"ok": True, "project_id": pid}
 
 
 # ---------------- SOC 2 Audit (admin) ----------------

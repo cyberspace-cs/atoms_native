@@ -1,164 +1,191 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atoms Native · Studio — AI 应用生成工作台</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="./styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atoms Native · Studio — AI 应用生成工作台</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="./styles.css">
 </head>
+
 <body>
-<div id="app">
-  <!-- ============ AUTH ============ -->
-  <section id="auth" class="auth">
-    <div class="auth-card glass">
-      <div class="brand">
-        <div class="logo">⚛</div>
-        <div>
-          <h1>Atoms <span>Native</span></h1>
-          <p>用一句话，让 AI 智能体团队为你造出一个可运行的应用</p>
-        </div>
-      </div>
-      <div class="tabs">
-        <button class="tab active" data-tab="login">登录</button>
-        <button class="tab" data-tab="register">注册</button>
-      </div>
-      <form id="authForm" autocomplete="off">
-        <input id="username" placeholder="用户名" autocomplete="off">
-        <input id="password" type="password" placeholder="密码">
-        <button class="primary" type="submit" id="authBtn">进入工作台</button>
-        <div id="authErr" class="err"></div>
-      </form>
-      <div class="hint">演示账号可直接注册体验 · 生成能力由 DeepSeek 等大模型驱动</div>
-    </div>
-    <div class="auth-bg"></div>
-  </section>
-
-  <!-- ============ MAIN ============ -->
-  <div id="main" class="hidden">
-    <header class="topbar glass">
-      <a class="brand sm" href="./" title="返回官网" style="text-decoration:none;color:inherit">
-        <div class="logo sm">⚛</div>
-        <span>Atoms <b>Native</b></span>
-        <span id="modeBadge" class="badge">·</span>
-      </a>
-      <div class="spacer"></div>
-      <div class="user">
-        <span id="userName" class="uname"></span>
-        <a id="adminLink" class="ghost sm" href="./admin.html" target="_blank">📊 研效看板</a>
-        <button id="logoutBtn" class="ghost">退出</button>
-      </div>
-    </header>
-
-    <div class="layout">
-      <!-- sidebar: gallery -->
-      <aside class="sidebar glass">
-        <div class="side-head">
-          <span>我的项目</span>
-          <button id="newBtn" class="ghost sm">+ 新建</button>
-        </div>
-        <div id="gallery" class="gallery"></div>
-      </aside>
-
-      <!-- studio -->
-      <section class="studio">
-        <div class="idea-card glass">
-          <label>描述你的想法，让智能体团队开始工作 🚀</label>
-          <textarea id="idea" rows="3" placeholder="例如：一个帮团队管理每日饮水与目标打卡的小工具，带统计图表"></textarea>
-          <div class="row">
-            <button id="genBtn" class="primary">⚡ 生成应用</button>
-            <select id="modelSel" class="model-sel" title="选择生成使用的模型（免费优先）"></select>
-            <span class="tip" id="genTip">PM → 架构 → 工程 → 评审，四步成应用</span>
-          </div>
-          <div id="templates" class="templates"></div>
-        </div>
-
-        <div class="phase-card glass">
-          <div class="card-head"><span>🧭 生成流程</span><span id="phaseStatus" class="status">待开始</span></div>
-          <div id="phasebar" class="phases">
-            <div class="phase" data-phase="PM"><span class="pdot">1</span><span class="plabel">需求</span><small>Emma</small></div>
-            <div class="phase" data-phase="Architect"><span class="pdot">2</span><span class="plabel">架构</span><small>Bob</small></div>
-            <div class="phase" data-phase="Engineer"><span class="pdot">3</span><span class="plabel">工程</span><small>Alex</small></div>
-            <div class="phase" data-phase="Reviewer"><span class="pdot">4</span><span class="plabel">评审</span><small>Mike</small></div>
-            <div class="phase" data-phase="done"><span class="pdot">✓</span><span class="plabel">完成</span></div>
-          </div>
-          <div class="pbar"><i id="pbarFill"></i></div>
-        </div>
-
-        <div class="team-card glass">
-          <div class="card-head"><span>🤖 AI 团队</span><span class="tip">多智能体协作</span></div>
-          <div id="team" class="team">
-            <div class="member" data-agent="PM"><span class="mic">📋</span><b>Emma</b><small>产品经理 · 需求规格</small></div>
-            <div class="member" data-agent="Architect"><span class="mic">🏗️</span><b>Bob</b><small>架构师 · 系统设计</small></div>
-            <div class="member" data-agent="Engineer"><span class="mic">⚙️</span><b>Alex</b><small>工程师 · 构建应用</small></div>
-            <div class="member" data-agent="Reviewer"><span class="mic">🔍</span><b>Mike</b><small>评审 · 质量把关</small></div>
+  <div id="app">
+    <!-- ============ AUTH ============ -->
+    <section id="auth" class="auth">
+      <div class="auth-card glass">
+        <div class="brand">
+          <div class="logo">⚛</div>
+          <div>
+            <h1>Atoms <span>Native</span></h1>
+            <p>用一句话，让 AI 智能体团队为你造出一个可运行的应用</p>
           </div>
         </div>
-
-        <div class="stream-card glass">
-          <div class="card-head"><span>🧠 智能体工作台</span><span id="streamStatus" class="status">空闲</span></div>
-          <div id="stream" class="stream"></div>
+        <div class="tabs">
+          <button class="tab active" data-tab="login">登录</button>
+          <button class="tab" data-tab="register">注册</button>
         </div>
+        <form id="authForm" autocomplete="off">
+          <input id="username" placeholder="用户名" autocomplete="off">
+          <input id="password" type="password" placeholder="密码">
+          <button class="primary" type="submit" id="authBtn">进入工作台</button>
+          <div id="authErr" class="err"></div>
+        </form>
+        <div class="hint">演示账号可直接注册体验 · 生成能力由 DeepSeek 等大模型驱动</div>
+      </div>
+      <div class="auth-bg"></div>
+    </section>
 
-        <div class="race-card glass">
-          <div class="card-head"><span>🏁 Race Mode · 多模型择优</span></div>
-          <div id="modelList" class="models"></div>
-          <button id="raceBtn" class="secondary">并行跑多个模型，评审打分选最优</button>
+    <!-- ============ MAIN ============ -->
+    <div id="main" class="hidden">
+      <header class="topbar glass">
+        <a class="brand sm" href="./" title="返回官网" style="text-decoration:none;color:inherit">
+          <div class="logo sm">⚛</div>
+          <span>Atoms <b>Native</b></span>
+          <span id="modeBadge" class="badge">·</span>
+        </a>
+        <div class="spacer"></div>
+        <div class="user">
+          <span id="userName" class="uname"></span>
+          <a id="adminLink" class="ghost sm" href="./admin.html" target="_blank">📊 研效看板</a>
+          <a class="ghost sm" href="./discover.html" target="_blank">✨ 发现</a>
+          <button id="logoutBtn" class="ghost">退出</button>
         </div>
-      </section>
+      </header>
 
-      <!-- preview + refine -->
-      <section class="preview-pane">
-        <div class="preview-card glass">
-          <div class="card-head">
-            <span>📱 实时预览 <span id="secBadge" class="sec-badge hidden"></span></span>
-            <div class="prev-actions">
-              <div class="seg" id="devSeg">
-                <button class="seg-btn on" data-dev="desktop">桌面</button>
-                <button class="seg-btn" data-dev="tablet">平板</button>
-                <button class="seg-btn" data-dev="mobile">手机</button>
+      <div class="layout">
+        <!-- sidebar: gallery -->
+        <aside class="sidebar glass">
+          <div class="side-head">
+            <span>我的项目</span>
+            <button id="newBtn" class="ghost sm">+ 新建</button>
+          </div>
+          <div id="gallery" class="gallery"></div>
+        </aside>
+
+        <!-- studio -->
+        <section class="studio">
+          <div class="idea-card glass">
+            <label>描述你的想法，让智能体团队开始工作 🚀</label>
+            <textarea id="idea" rows="3" placeholder="例如：一个帮团队管理每日饮水与目标打卡的小工具，带统计图表"></textarea>
+            <div class="row">
+              <button id="genBtn" class="primary">⚡ 生成应用</button>
+              <select id="modelSel" class="model-sel" title="选择生成使用的模型（免费优先）"></select>
+              <span class="tip" id="genTip">PM → 架构 → 工程 → 评审，四步成应用</span>
+            </div>
+            <div id="templates" class="templates"></div>
+          </div>
+
+          <div class="phase-card glass">
+            <div class="card-head"><span>🧭 生成流程</span><span id="phaseStatus" class="status">待开始</span></div>
+            <div id="phasebar" class="phases">
+              <div class="phase" data-phase="PM"><span class="pdot">1</span><span
+                  class="plabel">需求</span><small>Emma</small></div>
+              <div class="phase" data-phase="Architect"><span class="pdot">2</span><span
+                  class="plabel">架构</span><small>Bob</small></div>
+              <div class="phase" data-phase="Engineer"><span class="pdot">3</span><span
+                  class="plabel">工程</span><small>Alex</small></div>
+              <div class="phase" data-phase="Reviewer"><span class="pdot">4</span><span
+                  class="plabel">评审</span><small>Mike</small></div>
+              <div class="phase" data-phase="done"><span class="pdot">✓</span><span class="plabel">完成</span></div>
+            </div>
+            <div class="pbar"><i id="pbarFill"></i></div>
+          </div>
+
+          <div class="team-card glass">
+            <div class="card-head"><span>🤖 AI 团队</span><span class="tip">多智能体协作</span></div>
+            <div id="team" class="team">
+              <div class="member" data-agent="PM"><span class="mic">📋</span><b>Emma</b><small>产品经理 · 需求规格</small></div>
+              <div class="member" data-agent="Architect"><span class="mic">🏗️</span><b>Bob</b><small>架构师 · 系统设计</small>
               </div>
-              <button id="rollbackBtn" class="ghost sm">🕘 版本</button>
-              <button id="srcBtn" class="ghost sm">源码</button>
-              <button id="copyBtn" class="ghost sm">复制</button>
-              <button id="exportBtn" class="ghost sm">导出</button>
-              <button id="reloadBtn" class="ghost sm">刷新</button>
+              <div class="member" data-agent="Engineer"><span class="mic">⚙️</span><b>Alex</b><small>工程师 · 构建应用</small>
+              </div>
+              <div class="member" data-agent="Reviewer"><span class="mic">🔍</span><b>Mike</b><small>评审 · 质量把关</small>
+              </div>
             </div>
           </div>
-          <div id="versionPanel" class="ver-panel glass hidden"></div>
-          <div id="secPopover" class="sec-popover glass hidden"></div>
-          <div class="frame-wrap">
-            <div id="deviceFrame" class="device desktop">
-              <iframe id="preview" title="preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
-            </div>
-            <div id="frameEmpty" class="frame-empty">生成后，这里会出现你的应用 👀</div>
-          </div>
-          <div id="srcPanel" class="src-panel hidden"><pre id="srcCode"></pre></div>
-        </div>
 
-        <div class="refine-card glass">
-          <div class="card-head"><span>💬 对话式精修</span></div>
-          <div id="chat" class="chat"></div>
-          <div class="chat-input">
-            <input id="refineInput" placeholder="例如：把主色调改成绿色，加一个欢迎标语">
-            <button id="refineBtn" class="primary sm">发送</button>
+          <div class="stream-card glass">
+            <div class="card-head"><span>🧠 智能体工作台</span><span id="streamStatus" class="status">空闲</span></div>
+            <div id="stream" class="stream"></div>
           </div>
-          <div class="fb-row">
-            <span class="tip">这个版本质量如何？</span>
-            <button id="fbUp" class="ghost sm">👍 不错</button>
-            <button id="fbDown" class="ghost sm">👎 待改进</button>
+
+          <div class="race-card glass">
+            <div class="card-head"><span>🏁 Race Mode · 多模型择优</span></div>
+            <div id="modelList" class="models"></div>
+            <button id="raceBtn" class="secondary">并行跑多个模型，评审打分选最优</button>
           </div>
-          <div class="fb-comment-row">
-            <input id="fbComment" class="fb-comment" placeholder="补充评价或问题（可选）">
-            <span id="fbState" class="fb-state hidden">已反馈 ✓</span>
+        </section>
+
+        <!-- preview + refine -->
+        <section class="preview-pane">
+          <div class="preview-card glass">
+            <div class="card-head">
+              <span>📱 实时预览 <span id="secBadge" class="sec-badge hidden"></span></span>
+              <div class="prev-actions">
+                <div class="seg" id="devSeg">
+                  <button class="seg-btn on" data-dev="desktop">桌面</button>
+                  <button class="seg-btn" data-dev="tablet">平板</button>
+                  <button class="seg-btn" data-dev="mobile">手机</button>
+                </div>
+                <button id="rollbackBtn" class="ghost sm">🕘 版本</button>
+                <button id="srcBtn" class="ghost sm">源码</button>
+                <button id="copyBtn" class="ghost sm">复制</button>
+                <button id="exportBtn" class="ghost sm">导出</button>
+                <button id="reloadBtn" class="ghost sm">刷新</button>
+              </div>
+            </div>
+            <div id="versionPanel" class="ver-panel glass hidden"></div>
+            <div id="secPopover" class="sec-popover glass hidden"></div>
+            <div class="frame-wrap">
+              <div id="deviceFrame" class="device desktop">
+                <iframe id="preview" title="preview"
+                  sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+              </div>
+              <div id="frameEmpty" class="frame-empty">生成后，这里会出现你的应用 👀</div>
+            </div>
+            <div id="srcPanel" class="src-panel hidden">
+              <pre id="srcCode"></pre>
+            </div>
           </div>
-        </div>
-      </section>
+
+          <div class="refine-card glass">
+            <div class="card-head"><span>💬 对话式精修</span></div>
+            <div id="chat" class="chat"></div>
+            <div class="chat-input">
+              <input id="refineInput" placeholder="例如：把主色调改成绿色，加一个欢迎标语">
+              <button id="refineBtn" class="primary sm">发送</button>
+            </div>
+            <div class="fb-row">
+              <span class="tip">这个版本质量如何？</span>
+              <button id="fbUp" class="ghost sm">👍 不错</button>
+              <button id="fbDown" class="ghost sm">👎 待改进</button>
+            </div>
+            <div class="fb-comment-row">
+              <input id="fbComment" class="fb-comment" placeholder="补充评价或问题（可选）">
+              <span id="fbState" class="fb-state hidden">已反馈 ✓</span>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
-</div>
-<div id="toast" class="toast"></div>
-<script src="./app.js"></script>
+  <div id="toast" class="toast"></div>
+  <script src="./app.js"></script>
+  <script>
+    // 发现页「使用模板」跳转带入：?idea=… 预填输入框（登录前后都保留）
+    (function () {
+      try {
+        var idea = new URLSearchParams(location.search).get('idea');
+        if (idea) {
+          var el = document.getElementById('idea');
+          if (el) { el.value = idea; el.dispatchEvent(new Event('input')); }
+        }
+      } catch (e) { }
+    })();
+  </script>
 </body>
+
 </html>

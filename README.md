@@ -220,7 +220,7 @@ Atoms_Native/
 │   │   └── race.py       # 多模型并行择优
 │   └── .env.example
 ├── public/          # 前端（index.html=官网首页 / studio.html=工作台 / admin.html 看板 / landing.css）
-├── tests/           # unit_tests.py（35 项单测）+ smoke.py（12 项端到端）
+├── tests/           # unit_tests.py（39 项单测）+ smoke.py（12 项端到端）
 ├── .github/workflows/ci.yml  # CI: compileall + smoke + 评估门禁
 ├── Dockerfile / docker-compose.yml / nginx-atoms-native.conf
 └── README.md
