@@ -188,6 +188,11 @@
     } catch (e) { }
   }
 
+  function markAllStopped() {
+    document.querySelectorAll(".agent.running").forEach((el) => el.classList.remove("running"));
+    highlightTeam(null);
+  }
+
   // ---------- event router ----------
   function onEvent(ev) {
     switch (ev.type) {
@@ -231,7 +236,11 @@
         if (ev.version_id) state.versionId = ev.version_id;
         onDone(ev);
         break;
-      case "error": addNote("出错：" + ev.message, "❌"); break;
+      case "error":
+        addNote("出错：" + ev.message, "❌");
+        markAllStopped();
+        setBusy(false);
+        break;
     }
   }
   async function onDone(ev) {
@@ -328,7 +337,8 @@
     catch (e) { toast("创建项目失败：" + e.message); setBusy(false); return; }
     state.current = proj.project.id; state.currentTitle = proj.project.title;
     try { await streamPost("./api/generate", { project_id: proj.project.id, model: $("modelSel").value || null }, onEvent); }
-    catch (e) { toast("生成失败：" + e.message); setBusy(false); }
+    catch (e) { toast("生成失败：" + e.message); markAllStopped(); }
+    finally { setBusy(false); }
   }
   async function doRefine() {
     const msg = $("refineInput").value.trim();
