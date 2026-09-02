@@ -57,6 +57,7 @@ jobs:
   # ---- AI CI/CD: 评估门禁（对照企业实践：eval-gate + run-twice-average 抗抖动）----
   # 无 API Key 时走 mock 模式：离线模板本身是合法 HTML，结构化输出有效性仍为 1.0，
   # 门禁可过；真实质量评估需在有 key 的环境本地运行 runner.py --runs N。
+  # 门禁判定统一走 scripts/eval_gate.py，并由 tests/gate_test.py 证明其「回归会红」。
   eval-gate:
     runs-on: ubuntu-latest
     needs: build-and-smoke
@@ -69,21 +70,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run eval harness (mock, runs=1)
+      - name: Gate self-test (负例注入：证明回归失败则红)
+        run: python tests/gate_test.py
+      - name: Run eval harness (mock, run-twice-average)
         working-directory: server
-        run: python -m evals.runner
+        run: python -m evals.runner --runs 2
         env:
           LLM_PROVIDER: deepseek
       - name: Eval gate (fail on regression)
-        run: |
-          python - <<'PY'
-          import json, sys
-          rep = json.load(open("server/evals/_eval_report.json", encoding="utf-8"))
-          g = rep.get("gates", {})
-          ok = g.get("structured_output_gate_pass", False) and g.get("all_cases_pass", False)
-          print("GATE:", "PASS" if ok else "FAIL", g)
-          sys.exit(0 if ok else 1)
-          PY
+        run: python scripts/eval_gate.py --expect-mock
 
   # ---- Canary 发布（需密钥；默认不触发，由 secrets.DEPLOY_CANARY=true 开启）----
   canary-deploy:
@@ -98,11 +93,12 @@ jobs:
           SSH_USER: ${{ secrets.ATOMS_USER }}
           SSH_KEY: ${{ secrets.ATOMS_SSH_KEY }}
         run: |
-          echo "canary 发布步骤（需配置 secrets）：scp server/ -> 43.143.231.106:/home/ubuntu/atoms-native"
-          echo "  1) scp -r server/ 到目标机"
-          echo "  2) tmux kill-session -t atoms && tmux new-session -d -s atoms 'cd /home/ubuntu/atoms-native && uvicorn main:app --port 8088'"
-          echo "  3) nginx 子路径 /atoms-native/ 已配置 proxy_pass http://127.0.0.1:8088/"
-          echo "  4) 观察 /api/metrics 与审计告警 5 分钟，无异常再全量；异常则回滚（保留上一 tmux session）"
+          # 真实 canary 脚本：备份 → 部署 → 健康检查 → 异常自动回滚
+          # 脚本本体见 deploy/canary.sh（本地/服务器均可执行并已实测）
+          install -m 600 -D /dev/null ~/.ssh/id_canary
+          echo "$SSH_KEY" > ~/.ssh/id_canary
+          scp -O -i ~/.ssh/id_canary "$SSH_USER@$SSH_HOST:/home/ubuntu/atoms-native/deploy/canary.sh" /tmp/canary.sh
+          ssh -O -i ~/.ssh/id_canary "$SSH_USER@$SSH_HOST" "bash /tmp/canary.sh"
 
   # ---- 模型 Artifact Registry（模型 ID = 语义名+时间戳+版本+数据集 hash）----
   model-registry:

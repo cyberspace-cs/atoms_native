@@ -3,6 +3,7 @@
 Implemented as a generator that yields SSE-style event dicts and returns a
 final summary dict (captured via StopIteration.value by the caller).
 """
+import html
 import json
 import re
 import time
@@ -177,7 +178,8 @@ def _mock_arch(idea: str) -> str:
 
 
 def _mock_app(idea: str) -> str:
-    title = (idea or "My App")[:40]
+    # idea 为用户自由输入，必须 HTML 转义后再插入模板（adversarial case 会带 <script> 等）
+    title = html.escape((idea or "My App")[:40])
     return f"""<!DOCTYPE html>
 <html lang="zh">
 <head>

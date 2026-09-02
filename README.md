@@ -39,6 +39,7 @@
 2. **原生 JS 而非 React**：零构建、易部署、易在 iframe 沙箱运行；代价是状态管理需手写（对这个规模完全够用）。
 3. **多智能体顺序 + 评审修复环**：还原 Atoms 的"团队感"并提升一次成码率；Race Mode 用线程并行多模型，把耗时从"求和"降到"取最大"。
 4. **LLM 多厂商注册表**：DeepSeek 默认（key 现成），OpenAI 兼容厂商（通义千问等）可切；无 key 时自动降级"离线模板模式"，全流程仍可跑通（韧性）。
+5. **AI CI/CD 评估门禁**：`scripts/ci_gate.sh` 一键门禁（编译→单测→门禁自测→mock 起服→smoke→评估门禁）；`tests/gate_test.py` 用负例注入证明"回归失败则红"；门禁分两档——CI 冒烟级（`--expect-mock`，纯 mock 验证 harness 健康）与真实质量门禁（structured≥0.98 + valid_rate + 安全分）；`deploy/canary.sh` 真实 canary 发布（备份→部署→健康检查→异常自动回滚，服务器双路径实测）。
 
 ---
 

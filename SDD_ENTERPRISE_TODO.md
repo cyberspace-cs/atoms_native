@@ -13,7 +13,7 @@
 | ID | 模块 | 对齐实践 | 验收标准 (AC) | 状态 |
 |----|------|----------|---------------|------|
 | #0 | SDD 目录与 REQ_ROOT | SDD 规范驱动开发 | `docs/sdd/` 含 REQ_ROOT、各模块 demand/design/tasks；改动点清单可追踪 | ✅ |
-| #23 | CI/CD 评估门禁 + Canary | AI CI/CD: eval-gate + canary + model registry | `ci.yml` 含 evaluation-gate（回归失败则红）、canary 步骤、模型 artifact 注册；无 key 走 mock 门禁 | 🟡 |
+| #23 | CI/CD 评估门禁 + Canary | AI CI/CD: eval-gate + canary + model registry | `ci.yml` 含 evaluation-gate（回归失败则红）、canary 步骤、模型 artifact 注册；无 key 走 mock 门禁 | ✅ 门禁两档语义（真实全规则 / `--expect-mock` 冒烟级），`tests/gate_test.py` 11 例证明「回归会红」；`scripts/ci_gate.sh` 本地一键全链路；`deploy/canary.sh` 真实 canary+自动回滚（服务器双路径实测通过）；模型 artifact 注册见 ci.yml model-registry |
 
 ---
 
