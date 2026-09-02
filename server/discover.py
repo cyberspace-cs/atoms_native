@@ -11,7 +11,14 @@
 """
 from __future__ import annotations
 
+import os
+
 import database
+
+# 本地真实示例：策展生成的完整可玩应用（回填到 sample_html，发现页可预览）
+SAMPLE_APPS = {
+    "贪吃蛇小游戏": os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_apps", "snake.html"),
+}
 
 # 精选模板（官方 curated，社区扩展的口子留在 discover_items 表本身）
 SEED_ITEMS = [
@@ -34,8 +41,24 @@ SEED_ITEMS = [
 ]
 
 
+def _backfill_samples(conn):
+    """把本地示例 HTML 回填到缺少 sample_html 的模板。文件缺失则跳过，永不抛错。"""
+    for title, path in SAMPLE_APPS.items():
+        try:
+            row = conn.execute(
+                "SELECT id FROM discover_items WHERE title=? AND (sample_html IS NULL OR sample_html='')",
+                (title,)).fetchone()
+            if not row:
+                continue
+            with open(path, encoding="utf-8") as f:
+                conn.execute("UPDATE discover_items SET sample_html=? WHERE id=?", (f.read(), row["id"]))
+            conn.commit()
+        except Exception:
+            pass
+
+
 def ensure_seed():
-    """表为空时灌入精选模板。任何异常吞掉（种子缺失不能影响主服务）。"""
+    """表为空时灌入精选模板，并回填真实示例。任何异常吞掉（种子缺失不能影响主服务）。"""
     try:
         conn = database.get_conn()
         n = conn.execute("SELECT COUNT(*) c FROM discover_items").fetchone()["c"]
@@ -45,6 +68,7 @@ def ensure_seed():
                     "INSERT INTO discover_items(title,description,idea,category,author,emoji)"
                     " VALUES(?,?,?,?,?,?)", (title, desc, idea, cat, author, emoji))
             conn.commit()
+        _backfill_samples(conn)
         conn.close()
     except Exception:
         pass

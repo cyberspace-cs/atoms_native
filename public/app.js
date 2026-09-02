@@ -299,7 +299,7 @@
   }
   function highlightGallery(id) {
     document.querySelectorAll(".proj").forEach((el) =>
-      el.classList.toggle("active", el.dataset.id === id));
+      el.classList.toggle("active", String(el.dataset.id) === String(id)));
   }
   async function openProject(id) {
     try {
@@ -499,7 +499,14 @@
       const r = await api("POST", path, { username, password });
       state.token = r.token; state.user = r.user;
       localStorage.setItem("an_token", r.token);
-      enterApp();
+      await enterApp();
+      // 登录前从发现页带着「使用此模板」跳转来的：直达刚创建的项目
+      let pending = null;
+      try { pending = sessionStorage.getItem("an_open_project"); } catch (e) { }
+      if (pending) {
+        try { sessionStorage.removeItem("an_open_project"); } catch (e) { }
+        openProject(parseInt(pending, 10)).catch(() => { });
+      }
     } catch (err) { $("authErr").textContent = err.message || "认证失败"; }
   }
   function logout() { state.token = ""; localStorage.removeItem("an_token"); location.reload(); }
@@ -582,6 +589,25 @@
     if (state.token) {
       api("GET", "/me").then((r) => { state.user = r.user; enterApp(); })
         .catch(() => { localStorage.removeItem("an_token"); state.token = ""; });
+    }
+    // 发现页「使用此模板」登录跳转：?project=<id> 直达新项目
+    const pid = new URLSearchParams(location.search).get("project");
+    if (pid) {
+      history.replaceState(null, "", location.pathname);
+      if (state.token) {
+        api("GET", "/me").then((r) => { state.user = r.user; return enterApp(); })
+          .then(() => openProject(parseInt(pid, 10)))
+          .catch(() => { });
+      } else {
+        try { sessionStorage.setItem("an_open_project", pid); } catch (e) { }
+      }
+    }
+    const pending = (() => { try { return sessionStorage.getItem("an_open_project"); } catch (e) { return null; } })();
+    if (pending && state.token) {
+      sessionStorage.removeItem("an_open_project");
+      api("GET", "/me").then((r) => { state.user = r.user; return enterApp(); })
+        .then(() => openProject(parseInt(pending, 10)))
+        .catch(() => { });
     }
   }
   init();

@@ -336,7 +336,7 @@
           <span class="views">👁 ${it.views}</span>
         </div>
         <div class="btns">
-          ${it.has_sample ? `<a class="demo" href="/api/discover/${it.id}/sample" target="_blank" rel="noopener">▶ 真实示例</a>` : ''}
+          ${it.has_sample ? `<a class="demo" href="./api/discover/${it.id}/sample" target="_blank" rel="noopener">▶ 真实示例</a>` : ''}
           <button class="use" data-id="${it.id}">使用此模板 →</button>
         </div>
       </div>
@@ -347,7 +347,7 @@
     async function useTemplate(id) {
       const token = localStorage.getItem('an_token');
       try {
-        const res = await fetch(`/api/discover/${id}/use`, {
+        const res = await fetch(`./api/discover/${id}/use`, {
           method: 'POST',
           headers: token ? { 'Authorization': 'Bearer ' + token } : {}
         });
@@ -368,7 +368,7 @@
 
     async function load() {
       try {
-        const res = await fetch('/api/discover');
+        const res = await fetch('./api/discover');
         ITEMS = (await res.json()).items || [];
         renderChips();
         renderGrid();

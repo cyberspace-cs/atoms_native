@@ -485,6 +485,32 @@ class TestDiscover(unittest.TestCase):
         self.assertIsNone(self.disc.get_sample(2))
         self.assertIsNone(self.disc.get_sample(99999))
 
+    def test_backfill_samples_from_local_files(self):
+        """真实示例回填：种子后贪吃蛇应有完整 sample_html；幂等；文件缺失不抛错。"""
+        import database
+        self.disc.ensure_seed()
+        conn = database.get_conn()
+        row = conn.execute("SELECT sample_html FROM discover_items WHERE title='贪吃蛇小游戏'").fetchone()
+        self.assertTrue(row and row["sample_html"], "贪吃蛇模板应回填 sample_html")
+        self.assertIn("</html>", row["sample_html"])
+        before = row["sample_html"]
+        conn.close()
+        # 幂等：再跑一次不会重复/清空已有 sample
+        self.disc.ensure_seed()
+        conn = database.get_conn()
+        after = conn.execute("SELECT sample_html FROM discover_items WHERE title='贪吃蛇小游戏'").fetchone()["sample_html"]
+        self.assertEqual(before, after)
+        # 文件缺失：回填静默跳过，不抛错、不清空
+        conn.execute("UPDATE discover_items SET sample_html='' WHERE title='贪吃蛇小游戏'")
+        conn.commit()
+        conn.close()
+        with mock.patch.dict(self.disc.SAMPLE_APPS, {"贪吃蛇小游戏": os.path.join("no", "such", "file.html")}):
+            self.disc.ensure_seed()  # 不应抛错
+        conn = database.get_conn()
+        still_empty = conn.execute("SELECT sample_html FROM discover_items WHERE title='贪吃蛇小游戏'").fetchone()["sample_html"]
+        conn.close()
+        self.assertEqual(still_empty, "", "缺失文件时应保持空而非半写状态")
+
     def test_never_raises_on_db_error(self):
         with mock.patch.object(self.disc.database, "get_conn",
                                side_effect=RuntimeError("db down")):
