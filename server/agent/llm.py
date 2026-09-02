@@ -201,7 +201,7 @@ def chat(model: str | None, messages: list[dict], temperature: float = 0.7, max_
                 "temperature": temperature,
                 "max_tokens": max_tokens,
             },
-            timeout=180,
+            timeout=LLM_TIMEOUT,
         )
         resp.raise_for_status()
         data = resp.json()
