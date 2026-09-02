@@ -44,6 +44,10 @@ PROVIDER_CONFIG = {
     },
 }
 
+# 单次 LLM 调用超时（秒）。免费档模型可能长时间停流，部署演示环境可调小
+# （如 LLM_TIMEOUT=90）让降级防线更快介入。
+LLM_TIMEOUT = int(os.environ.get("LLM_TIMEOUT", "180"))
+
 
 def normalize_model(model: str | None):
     if not model:
