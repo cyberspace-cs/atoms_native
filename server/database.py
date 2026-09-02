@@ -154,6 +154,11 @@ def init_db():
         conn.execute("ALTER TABLE projects ADD COLUMN app_state TEXT")
     except Exception:
         pass
+    try:
+        # 发现页「真实示例」：由策展流程用真实大模型生成一次后回填的完整 HTML
+        conn.execute("ALTER TABLE discover_items ADD COLUMN sample_html TEXT")
+    except Exception:
+        pass
     for tbl, ddl in (
         ("audit_log", """CREATE TABLE IF NOT EXISTS audit_log(
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, action TEXT NOT NULL,

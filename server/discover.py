@@ -51,16 +51,30 @@ def ensure_seed():
 
 
 def list_items():
-    """发现页数据：按浏览量倒序。异常返回空列表。"""
+    """发现页数据：按浏览量倒序，含 has_sample 标记（不回传大字段）。异常返回空列表。"""
     try:
         conn = database.get_conn()
         rows = conn.execute(
-            "SELECT id,title,description,idea,category,author,emoji,views "
+            "SELECT id,title,description,idea,category,author,emoji,views,"
+            "(sample_html IS NOT NULL AND sample_html != '') AS has_sample "
             "FROM discover_items ORDER BY views DESC, id ASC").fetchall()
         conn.close()
         return [dict(r) for r in rows]
     except Exception:
         return []
+
+
+def get_sample(item_id):
+    """返回模板的真实示例 HTML（策展生成）；无则 None。"""
+    try:
+        conn = database.get_conn()
+        row = conn.execute("SELECT sample_html FROM discover_items WHERE id=?", (int(item_id),)).fetchone()
+        conn.close()
+        if row and row["sample_html"]:
+            return row["sample_html"]
+    except Exception:
+        pass
+    return None
 
 
 def add_view(item_id) -> bool:

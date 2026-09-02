@@ -75,6 +75,32 @@ def list_versions() -> list[dict]:
     return versions
 
 
+def milestones() -> list[dict]:
+    """解析「迭代路径」小节：真实 git 提交时间线的里程碑，返回 [{time, milestone, note}]。"""
+    index_file = PLAN_DIR / "版本发展历史.md"
+    if not index_file.exists():
+        return []
+    try:
+        text = _strip_comments(index_file.read_text(encoding="utf-8"))
+    except OSError:
+        return []
+    m = re.search(r"##\s*迭代路径(.*?)(?:\n##\s|\Z)", text, flags=re.S)
+    if not m:
+        return []
+    out = []
+    for line in m.group(1).splitlines():
+        line = line.strip()
+        if not line.startswith("|") or "---" in line:
+            continue
+        r = re.match(r"^\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*$", line)
+        if not r or r.group(1).strip() == "时间":
+            continue
+        out.append({"time": _clean(r.group(1)),
+                    "milestone": _clean(r.group(2)),
+                    "note": _clean(r.group(3))})
+    return out
+
+
 def snapshot_path(name: str) -> Path | None:
     """校验快照文件名并返回绝对路径；非法或越界返回 None（防路径穿越）。"""
     if not name or not _SNAPSHOT_RE.match(name):

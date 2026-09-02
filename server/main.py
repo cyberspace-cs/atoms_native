@@ -551,7 +551,7 @@ def feedback(body: dict, user=Depends(require_user),
 @app.get("/api/plan/versions")
 def plan_versions():
     """产品方案版本发展历史：索引表解析结果，时间倒序（最新在上）。公开接口。"""
-    return {"versions": pv.list_versions()}
+    return {"versions": pv.list_versions(), "milestones": pv.milestones()}
 
 
 @app.get("/api/plan/versions/{name}")
@@ -576,6 +576,15 @@ def discover_list():
 def discover_view(item_id: int):
     """浏览量 +1（fire-and-forget）。"""
     return {"ok": disc.add_view(item_id)}
+
+
+@app.get("/api/discover/{item_id}/sample")
+def discover_sample(item_id: int):
+    """模板真实示例：策展流程用真实大模型生成一次后回填的完整应用，公开直读。"""
+    html = disc.get_sample(item_id)
+    if not html:
+        raise HTTPException(status_code=404, detail="该模板暂无真实示例")
+    return Response(content=html, media_type="text/html; charset=utf-8")
 
 
 @app.post("/api/discover/{item_id}/use")

@@ -1,155 +1,394 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>版本发展历史 · Atoms Native</title>
-<style>
-  :root{
-    --bg:#070b14; --bg2:#0b1120; --card:rgba(255,255,255,.04); --line:rgba(255,255,255,.09);
-    --text:#e8edf7; --dim:#94a3b8; --cyan:#22d3ee; --violet:#a78bfa;
-    --grad:linear-gradient(90deg,#22d3ee,#a78bfa 60%,#f472b6);
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{
-    background:radial-gradient(1200px 600px at 80% -10%,rgba(167,139,250,.12),transparent),var(--bg);
-    color:var(--text);
-    font-family:"PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",Roboto,sans-serif;
-    min-height:100vh;
-  }
-  .wrap{max-width:880px;margin:0 auto;padding:48px 20px 80px}
-  a{color:var(--cyan);text-decoration:none}
-  header .kicker{color:var(--dim);font-size:13px;letter-spacing:.2em;text-transform:uppercase}
-  header h1{
-    font-size:34px;margin:10px 0 8px;
-    background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;
-  }
-  header p{color:var(--dim);font-size:14px;line-height:1.8}
-  .timeline{position:relative;margin-top:40px;padding-left:26px}
-  .timeline::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--line)}
-  .ver{position:relative;margin-bottom:20px}
-  .ver::before{
-    content:"";position:absolute;left:-26px;top:18px;width:12px;height:12px;border-radius:50%;
-    background:var(--grad);box-shadow:0 0 12px rgba(34,211,238,.6);
-  }
-  .ver-card{
-    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;
-    cursor:pointer;transition:border-color .2s,transform .2s;
-  }
-  .ver-card:hover{border-color:rgba(34,211,238,.45);transform:translateY(-2px)}
-  .ver-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .ver-tag{
-    font-size:13px;font-weight:700;padding:2px 10px;border-radius:999px;
-    background:rgba(34,211,238,.12);color:var(--cyan);border:1px solid rgba(34,211,238,.3);
-  }
-  .ver-latest{background:rgba(251,191,36,.12);color:var(--amber,#fbbf24);border-color:rgba(251,191,36,.35)}
-  .ver-date{color:var(--dim);font-size:13px}
-  .ver-topic{font-size:17px;font-weight:600;margin-top:8px}
-  .ver-summary{color:var(--dim);font-size:13.5px;line-height:1.8;margin-top:6px}
-  .ver-hint{color:var(--cyan);font-size:12.5px;margin-top:10px;opacity:.85}
-  #snapshot{
-    display:none;margin-top:28px;background:var(--bg2);border:1px solid var(--line);
-    border-radius:14px;overflow:hidden;
-  }
-  #snapshot-bar{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:12px 18px;border-bottom:1px solid var(--line);
-  }
-  #snapshot-title{font-size:14px;font-weight:600}
-  #snapshot-close{background:none;border:1px solid var(--line);color:var(--dim);
-    border-radius:8px;padding:4px 12px;cursor:pointer;font-size:12.5px}
-  #snapshot-close:hover{color:var(--text);border-color:var(--cyan)}
-  #snapshot-body{
-    padding:22px 24px;max-height:70vh;overflow:auto;
-    font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:13px;line-height:1.9;
-    white-space:pre-wrap;word-break:break-word;color:#cdd6e8;
-  }
-  .empty{color:var(--dim);margin-top:40px;font-size:14px}
-  footer{margin-top:48px;color:var(--dim);font-size:13px;text-align:center}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <header>
-    <div class="kicker">PRODUCT PLAN · CHANGELOG</div>
-    <h1>版本发展历史</h1>
-    <p>本方案边干边完善：每次迭代保留快照，按时间节点可回溯任意版本的完整内容。最新版本永远在最上面。</p>
-  </header>
-
-  <div class="timeline" id="timeline"></div>
-  <div class="empty" id="empty" style="display:none">暂无版本记录</div>
-
-  <section id="snapshot">
-    <div id="snapshot-bar">
-      <span id="snapshot-title"></span>
-      <button id="snapshot-close" onclick="closeSnapshot()">收起 ✕</button>
-    </div>
-    <div id="snapshot-body"></div>
-  </section>
-
-  <footer>Atoms Native · 把「念头」到「应用」之间的那条河，填成一条平路 · <a href="./index.html">返回官网</a></footer>
-</div>
-
-<script>
-async function loadVersions(){
-  const tl = document.getElementById('timeline');
-  try{
-    const res = await fetch('/api/plan/versions');
-    const data = await res.json();
-    const versions = data.versions || [];
-    if(!versions.length){
-      document.getElementById('empty').style.display = 'block';
-      return;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>版本发展历史 · Atoms Native</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --bg2: #0b1120;
+      --card: rgba(255, 255, 255, .04);
+      --line: rgba(255, 255, 255, .09);
+      --text: #e8edf7;
+      --dim: #94a3b8;
+      --cyan: #22d3ee;
+      --violet: #a78bfa;
+      --grad: linear-gradient(90deg, #22d3ee, #a78bfa 60%, #f472b6);
     }
-    versions.forEach((v,i)=>{
-      const el = document.createElement('div');
-      el.className = 'ver';
-      const tag = `<span class="ver-tag${i===0?' ver-latest':''}">${esc(v.version)}${i===0?' · 最新':''}</span>`;
-      const snap = v.snapshot
-        ? `<div class="ver-hint">点击查看该版本完整方案 ↓</div>` : '';
-      el.innerHTML = `
-        <div class="ver-card" ${v.snapshot?`onclick="openSnapshot('${escAttr(v.snapshot)}','${escAttr(v.version+" · "+v.date+" · "+v.topic)}')"`:''}>
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      background: radial-gradient(1200px 600px at 80% -10%, rgba(167, 139, 250, .12), transparent), var(--bg);
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", -apple-system, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 48px 20px 80px
+    }
+
+    a {
+      color: var(--cyan);
+      text-decoration: none
+    }
+
+    header .kicker {
+      color: var(--dim);
+      font-size: 13px;
+      letter-spacing: .2em;
+      text-transform: uppercase
+    }
+
+    header h1 {
+      font-size: 34px;
+      margin: 10px 0 8px;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    header p {
+      color: var(--dim);
+      font-size: 14px;
+      line-height: 1.8
+    }
+
+    .timeline {
+      position: relative;
+      margin-top: 40px;
+      padding-left: 26px
+    }
+
+    #mstone-sec {
+      display: none;
+      margin-top: 56px
+    }
+
+    #mstone-sec h2 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 4px
+    }
+
+    #mstone-sec .sub {
+      color: var(--dim);
+      font-size: 13px;
+      margin-bottom: 8px
+    }
+
+    .ms-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 16px;
+      transition: border-color .2s
+    }
+
+    .ms-card:hover {
+      border-color: rgba(167, 139, 250, .45)
+    }
+
+    .ms-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px
+    }
+
+    .ms-time {
+      color: var(--cyan);
+      font-size: 12.5px;
+      font-family: ui-monospace, Consolas, monospace;
+      flex: none
+    }
+
+    .ms-name {
+      font-size: 15px;
+      font-weight: 700
+    }
+
+    .ms-note {
+      color: var(--dim);
+      font-size: 13px;
+      line-height: 1.7;
+      margin-top: 4px
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--line)
+    }
+
+    .ver {
+      position: relative;
+      margin-bottom: 20px
+    }
+
+    .ver::before {
+      content: "";
+      position: absolute;
+      left: -26px;
+      top: 18px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--grad);
+      box-shadow: 0 0 12px rgba(34, 211, 238, .6);
+    }
+
+    .ver-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: border-color .2s, transform .2s;
+    }
+
+    .ver-card:hover {
+      border-color: rgba(34, 211, 238, .45);
+      transform: translateY(-2px)
+    }
+
+    .ver-head {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .ver-tag {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(34, 211, 238, .12);
+      color: var(--cyan);
+      border: 1px solid rgba(34, 211, 238, .3);
+    }
+
+    .ver-latest {
+      background: rgba(251, 191, 36, .12);
+      color: var(--amber, #fbbf24);
+      border-color: rgba(251, 191, 36, .35)
+    }
+
+    .ver-date {
+      color: var(--dim);
+      font-size: 13px
+    }
+
+    .ver-topic {
+      font-size: 17px;
+      font-weight: 600;
+      margin-top: 8px
+    }
+
+    .ver-summary {
+      color: var(--dim);
+      font-size: 13.5px;
+      line-height: 1.8;
+      margin-top: 6px
+    }
+
+    .ver-hint {
+      color: var(--cyan);
+      font-size: 12.5px;
+      margin-top: 10px;
+      opacity: .85
+    }
+
+    #snapshot {
+      display: none;
+      margin-top: 28px;
+      background: var(--bg2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    #snapshot-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    #snapshot-title {
+      font-size: 14px;
+      font-weight: 600
+    }
+
+    #snapshot-close {
+      background: none;
+      border: 1px solid var(--line);
+      color: var(--dim);
+      border-radius: 8px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 12.5px
+    }
+
+    #snapshot-close:hover {
+      color: var(--text);
+      border-color: var(--cyan)
+    }
+
+    #snapshot-body {
+      padding: 22px 24px;
+      max-height: 70vh;
+      overflow: auto;
+      font-family: ui-monospace, Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.9;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #cdd6e8;
+    }
+
+    .empty {
+      color: var(--dim);
+      margin-top: 40px;
+      font-size: 14px
+    }
+
+    footer {
+      margin-top: 48px;
+      color: var(--dim);
+      font-size: 13px;
+      text-align: center
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="kicker">PRODUCT PLAN · CHANGELOG</div>
+      <h1>版本发展历史</h1>
+      <p>本方案边干边完善：每次迭代保留快照，按时间节点可回溯任意版本的完整内容。最新版本永远在最上面。</p>
+    </header>
+
+    <div class="timeline" id="timeline"></div>
+    <div class="empty" id="empty" style="display:none">暂无版本记录</div>
+
+    <section id="mstone-sec">
+      <h2>迭代路径</h2>
+      <div class="sub">来自真实 git 提交时间线 · 48 小时开发实录</div>
+      <div class="timeline" id="mstone"></div>
+    </section>
+
+    <section id="snapshot">
+      <div id="snapshot-bar">
+        <span id="snapshot-title"></span>
+        <button id="snapshot-close" onclick="closeSnapshot()">收起 ✕</button>
+      </div>
+      <div id="snapshot-body"></div>
+    </section>
+
+    <footer>Atoms Native · 把「念头」到「应用」之间的那条河，填成一条平路 · <a href="./index.html">返回官网</a></footer>
+  </div>
+
+  <script>
+    async function loadVersions() {
+      const tl = document.getElementById('timeline');
+      try {
+        const res = await fetch('/api/plan/versions');
+        const data = await res.json();
+        const versions = data.versions || [];
+        if (!versions.length) {
+          document.getElementById('empty').style.display = 'block';
+          return;
+        }
+        versions.forEach((v, i) => {
+          const el = document.createElement('div');
+          el.className = 'ver';
+          const tag = `<span class="ver-tag${i === 0 ? ' ver-latest' : ''}">${esc(v.version)}${i === 0 ? ' · 最新' : ''}</span>`;
+          const snap = v.snapshot
+            ? `<div class="ver-hint">点击查看该版本完整方案 ↓</div>` : '';
+          el.innerHTML = `
+        <div class="ver-card" ${v.snapshot ? `onclick="openSnapshot('${escAttr(v.snapshot)}','${escAttr(v.version + " · " + v.date + " · " + v.topic)}')"` : ''}>
           <div class="ver-head">${tag}<span class="ver-date">${esc(v.date)}</span></div>
           <div class="ver-topic">${esc(v.topic)}</div>
           <div class="ver-summary">${esc(v.summary)}</div>
           ${snap}
         </div>`;
-      tl.appendChild(el);
-    });
-  }catch(e){
-    document.getElementById('empty').style.display = 'block';
-    document.getElementById('empty').textContent = '版本数据加载失败：' + e;
-  }
-}
+          tl.appendChild(el);
+        });
+        renderMilestones(data.milestones || []);
+      } catch (e) {
+        document.getElementById('empty').style.display = 'block';
+        document.getElementById('empty').textContent = '版本数据加载失败：' + e;
+      }
+    }
 
-async function openSnapshot(name, title){
-  const box = document.getElementById('snapshot');
-  const body = document.getElementById('snapshot-body');
-  document.getElementById('snapshot-title').textContent = title;
-  body.textContent = '加载中…';
-  box.style.display = 'block';
-  box.scrollIntoView({behavior:'smooth', block:'start'});
-  try{
-    const res = await fetch('/api/plan/versions/' + encodeURIComponent(name));
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    body.textContent = await res.text();
-  }catch(e){
-    body.textContent = '快照加载失败：' + e;
-  }
-}
+    function renderMilestones(list) {
+      if (!list.length) return;
+      const sec = document.getElementById('mstone-sec');
+      const tl = document.getElementById('mstone');
+      sec.style.display = 'block';
+      list.forEach(m => {
+        const el = document.createElement('div');
+        el.className = 'ver';
+        el.innerHTML = `
+      <div class="ms-card">
+        <div class="ms-head"><span class="ms-time">${esc(m.time)}</span><span class="ms-name">${esc(m.milestone)}</span></div>
+        <div class="ms-note">${esc(m.note)}</div>
+      </div>`;
+        tl.appendChild(el);
+      });
+    }
 
-function closeSnapshot(){
-  document.getElementById('snapshot').style.display = 'none';
-}
+    async function openSnapshot(name, title) {
+      const box = document.getElementById('snapshot');
+      const body = document.getElementById('snapshot-body');
+      document.getElementById('snapshot-title').textContent = title;
+      body.textContent = '加载中…';
+      box.style.display = 'block';
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try {
+        const res = await fetch('/api/plan/versions/' + encodeURIComponent(name));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        body.textContent = await res.text();
+      } catch (e) {
+        body.textContent = '快照加载失败：' + e;
+      }
+    }
 
-function esc(s){
-  return String(s??'').replace(/[&<>"']/g, c=>({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-}
-function escAttr(s){ return esc(s).replace(/\n/g,' '); }
+    function closeSnapshot() {
+      document.getElementById('snapshot').style.display = 'none';
+    }
 
-loadVersions();
-</script>
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+    function escAttr(s) { return esc(s).replace(/\n/g, ' '); }
+
+    loadVersions();
+  </script>
 </body>
+
 </html>

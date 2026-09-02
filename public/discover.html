@@ -202,9 +202,32 @@
       margin-left: auto
     }
 
+    .btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    .demo {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      color: var(--dim);
+      font-size: 13px;
+      transition: .18s
+    }
+
+    .demo:hover {
+      color: var(--violet);
+      border-color: rgba(167, 139, 250, .5)
+    }
+
     .use {
-      margin-top: 12px;
-      width: 100%;
+      flex: 1.4;
       padding: 8px 0;
       border-radius: 10px;
       cursor: pointer;
@@ -312,7 +335,10 @@
           <span class="author">${esc(it.author)}</span>
           <span class="views">👁 ${it.views}</span>
         </div>
-        <button class="use" data-id="${it.id}">使用此模板 →</button>
+        <div class="btns">
+          ${it.has_sample ? `<a class="demo" href="/api/discover/${it.id}/sample" target="_blank" rel="noopener">▶ 真实示例</a>` : ''}
+          <button class="use" data-id="${it.id}">使用此模板 →</button>
+        </div>
       </div>
     </div>`).join('');
       document.querySelectorAll('.use').forEach(b => b.onclick = () => useTemplate(b.dataset.id));

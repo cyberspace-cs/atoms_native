@@ -381,6 +381,15 @@ class TestPlanVersions(unittest.TestCase):
             self.assertIsNone(self.pv.snapshot_path(evil), f"应拒绝: {evil}")
             self.assertIsNone(self.pv.read_snapshot(evil), f"应拒绝: {evil}")
 
+    def test_milestones_parses_git_timeline(self):
+        """迭代路径：真实 git 时间线解析，含起步行，字段完整。"""
+        ms = self.pv.milestones()
+        self.assertGreaterEqual(len(ms), 10)
+        first, last = ms[0], ms[-1]
+        self.assertRegex(first["time"], r"^\d{2}-\d{2} \d{2}:\d{2}$")
+        self.assertTrue(first["milestone"] and first["note"])
+        self.assertTrue(any("起步" in m["milestone"] for m in ms))
+
     def test_list_versions_never_raises(self):
         """索引文件损坏/缺失时返回空列表，不抛异常。"""
         with mock.patch.object(self.pv, "PLAN_DIR", Path(self.pv.REPO_ROOT / "docs" / "__nope__")):
@@ -441,6 +450,21 @@ class TestDiscover(unittest.TestCase):
         self.assertEqual(row["idea"], item["idea"])
         # 模板不存在 → None
         self.assertIsNone(self.disc.use_template(99999, uid))
+
+    def test_sample_flag_and_get(self):
+        """真实示例：has_sample 标记 + get_sample 回填读取。"""
+        import database
+        conn = database.get_conn()
+        conn.execute("UPDATE discover_items SET sample_html='<html>demo</html>' WHERE id=1")
+        conn.execute("UPDATE discover_items SET sample_html='' WHERE id=2")
+        conn.commit()
+        conn.close()
+        items = {i["id"]: i for i in self.disc.list_items()}
+        self.assertTrue(items[1]["has_sample"])
+        self.assertFalse(items[2]["has_sample"])
+        self.assertEqual(self.disc.get_sample(1), "<html>demo</html>")
+        self.assertIsNone(self.disc.get_sample(2))
+        self.assertIsNone(self.disc.get_sample(99999))
 
     def test_never_raises_on_db_error(self):
         with mock.patch.object(self.disc.database, "get_conn",
