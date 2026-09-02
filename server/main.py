@@ -62,7 +62,7 @@ def register(body: UserCreate):
         raise HTTPException(status_code=400, detail=err)
     token = create_session(uid)
     conn = get_conn()
-    u = conn.execute("SELECT id,username,created_at FROM users WHERE id=?", (uid,)).fetchone()
+    u = conn.execute("SELECT id,username,role,created_at FROM users WHERE id=?", (uid,)).fetchone()
     conn.close()
     return {"token": token, "user": dict(u)}
 
@@ -79,7 +79,7 @@ def login(body: UserCreate, request: Request, authorization: str | None = Header
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     token = create_session(uid)
     conn = get_conn()
-    u = conn.execute("SELECT id,username,created_at FROM users WHERE id=?", (uid,)).fetchone()
+    u = conn.execute("SELECT id,username,role,created_at FROM users WHERE id=?", (uid,)).fetchone()
     conn.close()
     log_audit(uid, "login", target=f"user:{u['username']}", source_ip=ip, session_id=token)
     return {"token": token, "user": dict(u)}

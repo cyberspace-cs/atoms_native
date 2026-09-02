@@ -595,6 +595,21 @@ class TestAdminConsole(unittest.TestCase):
         self.assertTrue(any(e["action"] == "role_change" and e["resource_id"] == "user:target"
                             for e in events), "role_change 应写入审计（resource_id=user:target）")
 
+    def test_login_response_includes_role(self):
+        """回归钉死：login/register 响应的 user 必须含 role 字段。
+
+        admin.html 登录后直接用响应里的 user.role 判权，缺字段会导致
+        admin 也被误判为「无权限」（2026-09-03 线上真实踩坑）。
+        """
+        r = self.client.post("/api/auth/login",
+                             json={"username": "boss", "password": "pass1234"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["user"].get("role"), "admin")
+        r2 = self.client.post("/api/auth/register",
+                              json={"username": "role_reg_user", "password": "pass1234"})
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn("role", r2.json()["user"])
+
     def test_make_admin_script_states(self):
         """提权脚本：user->admin / 幂等 / 用户不存在 三态（独立用户，不污染 RBAC 用例）。"""
         self.main.create_user("script_user", "pass1234")
