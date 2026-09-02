@@ -4,6 +4,9 @@
 
 这是为 **AI Native 全栈工程师岗位笔试** 提交的 Atoms Demo。
 
+> **在线演示**：`https://taoxie.vip/atoms-native/`（官网首页）· `https://taoxie.vip/atoms-native/studio.html`（工作台）
+> 无 LLM Key 时自动进入「离线模板模式」，全链路仍可演示；配置 Key 后为真实大模型生成。
+
 ---
 
 ## ✨ 核心能力
@@ -119,7 +122,7 @@ Atoms_Native/
 │   │   ├── pipeline.py   # PM→Arch→Eng→Reviewer
 │   │   └── race.py       # 多模型并行择优
 │   └── .env.example
-├── public/          # 前端（index.html / app.js / styles.css）
+├── public/          # 前端（index.html=官网首页 / studio.html=工作台 / app.js / styles.css / landing.css）
 ├── Dockerfile / docker-compose.yml / nginx-atoms-native.conf
 └── README.md
 ```
