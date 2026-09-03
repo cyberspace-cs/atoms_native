@@ -386,6 +386,23 @@
       toast("已发布到发现页 🚀 其他人可以 Remix 你的作品了");
     } catch (e) { toast("发布失败：" + (e.message || e)); }
   }
+  async function doShare() {
+    if (!state.current) { toast("没有可分享的项目"); return; }
+    if (!state.token) { toast("请先登录"); return; }
+    if (!state.code) { toast("当前项目还没有版本，先生成一次"); return; }
+    try {
+      const res = await fetch("./api/projects/" + state.current + "/share",
+        { method: "POST", headers: authHeader() });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast(d.detail || "分享失败"); return;
+      }
+      const url = location.origin + location.pathname.replace(/[^/]*$/, "")
+        + "api/share/" + (await res.json()).token;
+      await navigator.clipboard.writeText(url);
+      toast("分享链接已复制，任何人无需登录即可预览 🔗");
+    } catch (e) { toast("分享失败：" + (e.message || e)); }
+  }
   async function doCopy() {
     if (!state.code) { toast("还没有可复制的源码"); return; }
     try { await navigator.clipboard.writeText(state.code); toast("已复制 HTML 到剪贴板"); }
@@ -591,6 +608,7 @@
     $("fbDown").onclick = () => doFeedback(-1);
     $("exportBtn").onclick = doExport;
     $("publishBtn").onclick = doPublish;
+    $("shareBtn").onclick = doShare;
     $("reloadBtn").onclick = doReload;
     $("copyBtn").onclick = doCopy;
     $("srcBtn").onclick = toggleSrc;

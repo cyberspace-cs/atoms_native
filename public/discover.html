@@ -417,7 +417,7 @@
         <div class="desc">${esc(it.description)}</div>
         <div class="meta">
           <span class="avatar">${esc((it.author || 'A')[0].toUpperCase())}</span>
-          <span class="author">${esc(it.author)}</span>
+          <a class="author" href="./portfolio.html?u=${encodeURIComponent(it.author)}">${esc(it.author)}</a>
           <span class="views">🚀 ${it.uses || 0} · 👁 ${it.views}</span>
         </div>
         <div class="btns">

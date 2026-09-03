@@ -74,24 +74,28 @@ def ensure_seed():
         pass
 
 
-def list_items(q: str = "", sort: str = "views"):
-    """发现页数据。q 模糊匹配标题/描述/想法，sort=views(最热)|new(最新)。
+def list_items(q: str = "", sort: str = "views", author: str = ""):
+    """发现页数据。q 模糊匹配标题/描述/想法，sort=views(最热)|new(最新)，author 按作者过滤（作品集页）。
 
     对齐 atoms.dev 的 Prompt search 能力：社区内容多起来之后，搜索是
     找到「能被一句话变成项目」的模板的最短路径。异常返回空列表。
     """
     try:
-        where, params = "", []
+        where, params = [], []
         if q:
             like = f"%{q.strip()}%"
-            where = " WHERE title LIKE ? OR description LIKE ? OR idea LIKE ?"
-            params = [like, like, like]
+            where.append("(title LIKE ? OR description LIKE ? OR idea LIKE ?)")
+            params += [like, like, like]
+        if author:
+            where.append("author=?")
+            params.append(author)
+        w = (" WHERE " + " AND ".join(where)) if where else ""
         order = "created_at DESC, id DESC" if sort == "new" else "views DESC, id ASC"
         conn = database.get_conn()
         rows = conn.execute(
             "SELECT id,title,description,idea,category,author,emoji,views,uses,"
             "(sample_html IS NOT NULL AND sample_html != '') AS has_sample "
-            f"FROM discover_items{where} ORDER BY {order}", params).fetchall()
+            f"FROM discover_items{w} ORDER BY {order}", params).fetchall()
         conn.close()
         return [dict(r) for r in rows]
     except Exception:

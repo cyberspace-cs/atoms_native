@@ -3,6 +3,7 @@ Routes: auth, projects CRUD, SSE generate/refine/race, preview, export.
 """
 import json
 import os
+import secrets
 import time
 from pathlib import Path
 
@@ -569,10 +570,10 @@ def plan_snapshot(name: str):
 # ---------------- Discover / Templates (public) ----------------
 
 @app.get("/api/discover")
-def discover_list(q: str = "", sort: str = "views"):
-    """发现页：社区精选模板。q 模糊搜索，sort=views(最热)|new(最新)。公开接口，惰性种子。"""
+def discover_list(q: str = "", sort: str = "views", author: str = ""):
+    """发现页：社区精选模板。q 模糊搜索，sort=views(最热)|new(最新)，author=某人作品集。公开接口，惰性种子。"""
     disc.ensure_seed()
-    return {"items": disc.list_items(q=q, sort=sort)}
+    return {"items": disc.list_items(q=q, sort=sort, author=author)}
 
 
 @app.post("/api/discover/{item_id}/view")
@@ -614,6 +615,39 @@ def project_publish(pid: int, user=Depends(require_user),
     log_audit(user["id"], "publish", f"discover:{item_id}", f"project:{pid}",
               source_ip=ip, session_id=sid)
     return {"ok": True, "item_id": item_id}
+
+
+@app.post("/api/projects/{pid}/share")
+def project_share(pid: int, user=Depends(require_user),
+                  request: Request = None, authorization: str | None = Header(default=None)):
+    """生成/复用项目只读分享 token。链接形如 /api/share/{token}，无需登录即可预览。"""
+    p = _get_project(pid, user)
+    if not p or not p["current_version"]:
+        raise HTTPException(status_code=404, detail="项目不存在或暂无版本")
+    token = p["share_token"] or secrets.token_urlsafe(10)
+    conn = get_conn()
+    conn.execute("UPDATE projects SET share_token=? WHERE id=?", (token, pid))
+    conn.commit()
+    conn.close()
+    ip, sid = _audit_ctx(request, authorization)
+    log_audit(user["id"], "share", f"project:{pid}", token[:6] + "…",
+              source_ip=ip, session_id=sid)
+    return {"ok": True, "token": token}
+
+
+@app.get("/api/share/{token}")
+def share_view(token: str):
+    """公开只读预览（分享链接落点）：任何人可看，无需登录，不暴露源码以外的信息。"""
+    conn = get_conn()
+    p = conn.execute(
+        "SELECT current_version FROM projects WHERE share_token=?", (token,)).fetchone()
+    v = None
+    if p and p["current_version"]:
+        v = conn.execute("SELECT code FROM versions WHERE id=?", (p["current_version"],)).fetchone()
+    conn.close()
+    if not v or not v["code"]:
+        raise HTTPException(status_code=404, detail="分享不存在或已失效")
+    return Response(content=v["code"], media_type="text/html; charset=utf-8")
 
 
 # ---------------- SOC 2 Audit (admin) ----------------

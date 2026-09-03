@@ -567,6 +567,11 @@ class TestDiscover(unittest.TestCase):
         self.assertIsNotNone(pid2)
         after = {i["id"]: i for i in self.disc.list_items()}[item_id]["uses"]
         self.assertEqual(after, before + 1)
+        # 作品集：按作者过滤，只看到该作者的作品
+        mine = self.disc.list_items(author="pub_u")
+        self.assertTrue(mine)
+        self.assertTrue(all(i["author"] == "pub_u" for i in mine))
+        self.assertFalse(any(i["author"] == "taoxie" for i in mine))
 
     def test_never_raises_on_db_error(self):
         with mock.patch.object(self.disc.database, "get_conn",
@@ -685,6 +690,78 @@ class TestAdminConsole(unittest.TestCase):
         # 不存在
         ok3, msg3 = mk.set_role("no_such_user", "admin")
         self.assertFalse(ok3)
+
+
+class TestShare(unittest.TestCase):
+    """公开分享链接：owner 生成 token → 任何人免登录预览；坏 token 404；非 owner 不能生成。"""
+
+    @classmethod
+    def setUpClass(cls):
+        import config
+        cls._tmp = tempfile.TemporaryDirectory()
+        config.DB_PATH = os.path.join(cls._tmp.name, "share_test.db")
+        import database
+        database.DB_PATH = config.DB_PATH
+        database.init_db()
+        database.audit.WORM_PATH = os.path.join(cls._tmp.name, "audit_test.log")
+        database.audit._last_hash = None
+        cls.main = load("main", os.path.join(SERVER, "main.py"))
+        from fastapi.testclient import TestClient
+        cls.client = TestClient(cls.main.app)
+        cls.main.create_user("owner", "pass1234")
+        cls.main.create_user("stranger", "pass1234")
+        import database as db
+        conn = db.get_conn()
+        uid = conn.execute("SELECT id FROM users WHERE username='owner'").fetchone()["id"]
+        pid = conn.execute(
+            "INSERT INTO projects(user_id,title,idea,status,current_version) VALUES(?,?,?,?,1)",
+            (uid, "分享测试", "一个测试应用", "draft")).lastrowid
+        conn.execute(
+            "INSERT INTO versions(id,project_id,version_no,code,model_used,note)"
+            " VALUES(1,?,1,'<html>shared app</html>','deepseek','初版')", (pid,))
+        conn.commit()
+        conn.close()
+        cls.pid = pid
+        cls.token_owner = cls.main.create_session(cls._uid("owner"))
+        cls.token_stranger = cls.main.create_session(cls._uid("stranger"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    @classmethod
+    def _uid(cls, username):
+        import database as db
+        conn = db.get_conn()
+        uid = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()["id"]
+        conn.close()
+        return uid
+
+    def test_share_flow(self):
+        # 未登录不能生成
+        r = self.client.post(f"/api/projects/{self.pid}/share")
+        self.assertEqual(r.status_code, 401)
+        # 非 owner 不能生成
+        r = self.client.post(f"/api/projects/{self.pid}/share",
+                             headers={"Authorization": "Bearer " + self.token_stranger})
+        self.assertEqual(r.status_code, 404)
+        # owner 生成 → token
+        r = self.client.post(f"/api/projects/{self.pid}/share",
+                             headers={"Authorization": "Bearer " + self.token_owner})
+        self.assertEqual(r.status_code, 200)
+        token = r.json()["token"]
+        self.assertTrue(token)
+        # 公开免登录访问 → 返回 HTML
+        r = self.client.get(f"/api/share/{token}")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("shared app", r.text)
+        self.assertIn("text/html", r.headers["content-type"])
+        # 坏 token → 404
+        self.assertEqual(self.client.get("/api/share/not-a-token").status_code, 404)
+        # 幂等：再生成拿同一个 token（链接不失效）
+        r2 = self.client.post(f"/api/projects/{self.pid}/share",
+                              headers={"Authorization": "Bearer " + self.token_owner})
+        self.assertEqual(r2.json()["token"], token)
 
 
 if __name__ == "__main__":

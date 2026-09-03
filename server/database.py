@@ -164,6 +164,11 @@ def init_db():
         conn.execute("ALTER TABLE discover_items ADD COLUMN uses INTEGER NOT NULL DEFAULT 0")
     except Exception:
         pass
+    try:
+        # 公开分享链接：项目级只读分享 token（空 = 未分享）
+        conn.execute("ALTER TABLE projects ADD COLUMN share_token TEXT")
+    except Exception:
+        pass
     for tbl, ddl in (
         ("audit_log", """CREATE TABLE IF NOT EXISTS audit_log(
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, action TEXT NOT NULL,
