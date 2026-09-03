@@ -511,6 +511,25 @@ class TestDiscover(unittest.TestCase):
         conn.close()
         self.assertEqual(still_empty, "", "缺失文件时应保持空而非半写状态")
 
+    def test_search_and_sort(self):
+        """搜索 + 排序：q 模糊命中 title/description/idea，sort 控制最热/最新。"""
+        self.disc.ensure_seed()
+        # 搜索命中标题（贪吃蛇）
+        snake = self.disc.list_items(q="贪吃蛇")
+        self.assertEqual(len(snake), 1)
+        self.assertEqual(snake[0]["title"], "贪吃蛇小游戏")
+        # 搜索命中 description 字段（图表）
+        self.assertGreaterEqual(len(self.disc.list_items(q="图表")), 1)
+        # 搜索无结果 → 空列表（页面显示空态文案）
+        self.assertEqual(self.disc.list_items(q="不存在的关键词xyz"), [])
+        # 默认最热排序：views 非升序
+        hot = self.disc.list_items()
+        views = [i["views"] for i in hot]
+        self.assertEqual(views, sorted(views, reverse=True))
+        # 最新排序：created_at 非升序（种子同秒落库时按 id 倒序兜底）
+        new = self.disc.list_items(sort="new")
+        self.assertEqual([i["id"] for i in new], sorted([i["id"] for i in new], reverse=True))
+
     def test_never_raises_on_db_error(self):
         with mock.patch.object(self.disc.database, "get_conn",
                                side_effect=RuntimeError("db down")):

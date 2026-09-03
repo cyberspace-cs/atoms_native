@@ -569,10 +569,10 @@ def plan_snapshot(name: str):
 # ---------------- Discover / Templates (public) ----------------
 
 @app.get("/api/discover")
-def discover_list():
-    """发现页：社区精选模板，按浏览量倒序。公开接口，惰性种子。"""
+def discover_list(q: str = "", sort: str = "views"):
+    """发现页：社区精选模板。q 模糊搜索，sort=views(最热)|new(最新)。公开接口，惰性种子。"""
     disc.ensure_seed()
-    return {"items": disc.list_items()}
+    return {"items": disc.list_items(q=q, sort=sort)}
 
 
 @app.post("/api/discover/{item_id}/view")

@@ -68,11 +68,78 @@
       max-width: 560px
     }
 
+    /* ---- 工具栏：搜索 + 排序 ---- */
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin: 30px 0 24px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .search {
+      flex: 1;
+      min-width: 220px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      transition: .18s
+    }
+
+    .search:focus-within {
+      border-color: rgba(34, 211, 238, .45)
+    }
+
+    .search svg {
+      flex: none;
+      opacity: .55
+    }
+
+    .search input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 13.5px
+    }
+
+    .search input::placeholder {
+      color: var(--dim)
+    }
+
+    .sorter {
+      display: flex;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+      flex: none
+    }
+
+    .sorter button {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--dim);
+      font-size: 13px;
+      cursor: pointer;
+      transition: .18s
+    }
+
+    .sorter button.on {
+      background: rgba(34, 211, 238, .1);
+      color: var(--cyan)
+    }
+
     /* ---- 分类 chips：极简单选 ---- */
     .chips {
       display: flex;
       gap: 8px;
-      margin: 30px 0 24px;
+      margin: 0 0 24px;
       flex-wrap: wrap
     }
 
@@ -288,6 +355,19 @@
       <p>看看社区用一句话造了什么。挑一个顺眼的模板，一键变成你的项目，改一句话就是你的作品。</p>
     </header>
 
+    <div class="toolbar">
+      <label class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+        </svg>
+        <input id="q" type="text" placeholder="搜索模板、想法、关键词…" autocomplete="off">
+      </label>
+      <div class="sorter" id="sorter">
+        <button class="on" data-sort="views">🔥 最热</button>
+        <button data-sort="new">✨ 最新</button>
+      </div>
+    </div>
     <div class="chips" id="chips"></div>
     <div class="grid" id="grid"></div>
     <div class="empty" id="empty" style="display:none">暂无模板</div>
@@ -300,6 +380,9 @@
   <script>
     let ITEMS = [];
     let CAT = '全部';
+    let SORT = 'views';
+    let Q = '';
+    let debounce = null;
 
     function esc(s) {
       return String(s ?? '').replace(/[&<>"']/g, c => ({
@@ -322,7 +405,9 @@
 
     function renderGrid() {
       const list = ITEMS.filter(i => CAT === '全部' || i.category === CAT);
-      document.getElementById('empty').style.display = list.length ? 'none' : 'block';
+      const empty = document.getElementById('empty');
+      empty.style.display = list.length ? 'none' : 'block';
+      empty.textContent = Q ? `没有找到和「${Q}」相关的模板` : '暂无模板';
       document.getElementById('grid').innerHTML = list.map((it, idx) => `
     <div class="card">
       <div class="cover g${idx % 4}">${esc(it.emoji)}</div>
@@ -368,7 +453,10 @@
 
     async function load() {
       try {
-        const res = await fetch('./api/discover');
+        const p = new URLSearchParams();
+        if (Q) p.set('q', Q);
+        if (SORT) p.set('sort', SORT);
+        const res = await fetch('./api/discover' + (p.toString() ? '?' + p : ''));
         ITEMS = (await res.json()).items || [];
         renderChips();
         renderGrid();
@@ -377,6 +465,22 @@
         document.getElementById('empty').textContent = '加载失败：' + e.message;
       }
     }
+
+    // 搜索：300ms 防抖，逐字即时反馈
+    document.getElementById('q').addEventListener('input', e => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        Q = e.target.value.trim();
+        CAT = '全部';
+        load();
+      }, 300);
+    });
+    // 排序：最热 / 最新
+    document.querySelectorAll('#sorter button').forEach(b => b.onclick = () => {
+      SORT = b.dataset.sort;
+      document.querySelectorAll('#sorter button').forEach(x => x.classList.toggle('on', x === b));
+      load();
+    });
     load();
   </script>
 </body>
