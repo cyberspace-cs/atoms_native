@@ -371,6 +371,21 @@
       a.click();
     } catch (e) { toast("导出失败"); }
   }
+  async function doPublish() {
+    if (!state.current) { toast("先生成一个应用再发布"); return; }
+    if (!state.token) { toast("请先登录"); return; }
+    if (!state.code) { toast("当前项目还没有版本，先生成一次"); return; }
+    if (!confirm("发布到「发现」页？其他人可以一键使用你的模板（Remix）。")) return;
+    try {
+      const res = await fetch("./api/projects/" + state.current + "/publish",
+        { method: "POST", headers: authHeader() });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast(d.detail || "发布失败"); return;
+      }
+      toast("已发布到发现页 🚀 其他人可以 Remix 你的作品了");
+    } catch (e) { toast("发布失败：" + (e.message || e)); }
+  }
   async function doCopy() {
     if (!state.code) { toast("还没有可复制的源码"); return; }
     try { await navigator.clipboard.writeText(state.code); toast("已复制 HTML 到剪贴板"); }
@@ -575,6 +590,7 @@
     $("fbUp").onclick = () => doFeedback(1);
     $("fbDown").onclick = () => doFeedback(-1);
     $("exportBtn").onclick = doExport;
+    $("publishBtn").onclick = doPublish;
     $("reloadBtn").onclick = doReload;
     $("copyBtn").onclick = doCopy;
     $("srcBtn").onclick = toggleSrc;

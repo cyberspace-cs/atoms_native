@@ -530,6 +530,44 @@ class TestDiscover(unittest.TestCase):
         new = self.disc.list_items(sort="new")
         self.assertEqual([i["id"] for i in new], sorted([i["id"] for i in new], reverse=True))
 
+    def test_publish_and_remix_loop(self):
+        """发布闭环：发布落库（含示例）→ 他人 Remix → uses 计数增长；归属校验。"""
+        import database
+        conn = database.get_conn()
+        conn.execute("INSERT INTO users(username,password_hash,salt) VALUES('pub_u','x','s')")
+        conn.execute("INSERT INTO users(username,password_hash,salt) VALUES('remixer','x','s')")
+        uid = conn.execute("SELECT id FROM users WHERE username='pub_u'").fetchone()["id"]
+        uid2 = conn.execute("SELECT id FROM users WHERE username='remixer'").fetchone()["id"]
+        # 项目 + 当前版本（发布的前提）
+        pid = database.execute(conn,
+            "INSERT INTO projects(user_id,title,idea,status) VALUES(?,?,?,?)",
+            (uid, "我的天气站", "一个极简天气站", "draft"))
+        conn.execute("UPDATE projects SET current_version=1 WHERE id=?", (pid,))
+        conn.execute(
+            "INSERT INTO versions(id,project_id,version_no,code,model_used,note) VALUES(1,?,1,?, 'deepseek','初版')",
+            (pid, "<html>weather</html>"))
+        conn.commit()
+        conn.close()
+        # 发布 → 落库为社区模板，当前版本代码成为真实示例
+        item_id = self.disc.publish_item(uid, "pub_u", pid)
+        self.assertIsNotNone(item_id)
+        items = {i["id"]: i for i in self.disc.list_items()}
+        self.assertEqual(items[item_id]["author"], "pub_u")
+        self.assertEqual(items[item_id]["category"], "社区")
+        self.assertTrue(items[item_id]["has_sample"])
+        self.assertEqual(self.disc.get_sample(item_id), "<html>weather</html>")
+        # 归属校验：别人不能把我的项目发布出去
+        self.assertIsNone(self.disc.publish_item(uid2, "remixer", pid))
+        # 重复发布 = 更新（不重复占卡）
+        item_id2 = self.disc.publish_item(uid, "pub_u", pid)
+        self.assertEqual(item_id2, item_id)
+        # 他人 Remix：uses 计数 +1，且生成新项目
+        before = items[item_id]["uses"]
+        pid2 = self.disc.use_template(item_id, uid2)
+        self.assertIsNotNone(pid2)
+        after = {i["id"]: i for i in self.disc.list_items()}[item_id]["uses"]
+        self.assertEqual(after, before + 1)
+
     def test_never_raises_on_db_error(self):
         with mock.patch.object(self.disc.database, "get_conn",
                                side_effect=RuntimeError("db down")):

@@ -159,6 +159,11 @@ def init_db():
         conn.execute("ALTER TABLE discover_items ADD COLUMN sample_html TEXT")
     except Exception:
         pass
+    try:
+        # 发布闭环（Remix 统计）：社区模板被「使用此模板」变成新项目的次数
+        conn.execute("ALTER TABLE discover_items ADD COLUMN uses INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
     for tbl, ddl in (
         ("audit_log", """CREATE TABLE IF NOT EXISTS audit_log(
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, action TEXT NOT NULL,

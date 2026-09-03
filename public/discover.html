@@ -418,7 +418,7 @@
         <div class="meta">
           <span class="avatar">${esc((it.author || 'A')[0].toUpperCase())}</span>
           <span class="author">${esc(it.author)}</span>
-          <span class="views">👁 ${it.views}</span>
+          <span class="views">🚀 ${it.uses || 0} · 👁 ${it.views}</span>
         </div>
         <div class="btns">
           ${it.has_sample ? `<a class="demo" href="./api/discover/${it.id}/sample" target="_blank" rel="noopener">▶ 真实示例</a>` : ''}

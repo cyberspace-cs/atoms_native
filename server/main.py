@@ -603,6 +603,19 @@ def discover_use(item_id: int, user=Depends(require_user),
     return {"ok": True, "project_id": pid}
 
 
+@app.post("/api/projects/{pid}/publish")
+def project_publish(pid: int, user=Depends(require_user),
+                     request: Request = None, authorization: str | None = Header(default=None)):
+    """把我的项目发布到发现页（社区 Remix 闭环：他人「使用此模板」即改编）。"""
+    item_id = disc.publish_item(user["id"], user["username"], pid)
+    if item_id is None:
+        raise HTTPException(status_code=404, detail="项目不存在或暂无版本，无法发布")
+    ip, sid = _audit_ctx(request, authorization)
+    log_audit(user["id"], "publish", f"discover:{item_id}", f"project:{pid}",
+              source_ip=ip, session_id=sid)
+    return {"ok": True, "item_id": item_id}
+
+
 # ---------------- SOC 2 Audit (admin) ----------------
 
 @app.get("/api/audit")
