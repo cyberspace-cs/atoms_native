@@ -315,6 +315,23 @@
       border-radius: 6px;
       font-size: 12px
     }
+
+    /* a11y（loop engineering 2026-09-04） */
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important
+      }
+    }
   </style>
 </head>
 

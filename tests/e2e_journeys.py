@@ -89,6 +89,16 @@ def run(page):
     check("生成完成，预览已渲染", lambda: (_ for _ in ()).throw(
         AssertionError("preview srcdoc 未就绪")) if not (
             page.evaluate("document.getElementById('preview').srcdoc.length") > 100) else None)
+    # 预览就绪 ≠ 生成完成：第一个 app_code 在流中途就到，version 此刻还没落库，
+    # 立刻分享会 404（2026-09-04 抓到的真实竞态，setBusy 已禁用发布/分享）。
+    # 就绪信号：生成结束 setBusy(false) → genBtn 恢复可用。
+    for _ in range(120):
+        if page.evaluate("!document.getElementById('genBtn').disabled"):
+            break
+        page.wait_for_timeout(1000)
+    check("生成流已结束（genBtn 恢复可用，version 已落库）", lambda: (_ for _ in ()).throw(
+        AssertionError("genBtn 120s 内未恢复可用")) if page.evaluate(
+            "document.getElementById('genBtn').disabled") else None)
 
     # ── 4. 发布到发现页 ──────────────────────────────────────
     print("[4] 发布")

@@ -125,6 +125,14 @@ css = (PUBLIC / "styles.css").read_text(encoding="utf-8")
 for cls in (".status.busy", ".agent.running", ".toast.show"):
     check(f"C4 样式类存在: {cls}", cls in css)
 
+# C5 busy 期间必须连带禁用 publish/share（生成未落库时点分享 404 / 发布半成品
+#    ——2026-09-04 E2E 抓到的真实竞态）
+busy_line = re.search(r"\[([^\]]*)\]\.forEach\(\(id\)", app_js)
+busy_ids = busy_line.group(1) if busy_line else ""
+check("C5 setBusy 连带禁用 publishBtn/shareBtn",
+      all(f'"{i}"' in busy_line.group(0) for i in ("genBtn", "refineBtn", "publishBtn", "shareBtn")),
+      f"setBusy 列表: {busy_ids}")
+
 # ---------- D. 结构守卫（防编辑器旧缓冲把结构改回去；空白容忍，容忍格式化折行） ----------
 check("D1 studio.html 主区无 team-card（团队详情移至 team.html）", "team-card" not in studio)
 # D2（2026-09-04 反转）：Race 模式不对用户开放——前端任何页面不得出现 Race 入口
@@ -150,6 +158,31 @@ check("E3 admin.html 只用相对路径 ./api（子路径部署）",
 check("E4 admin.html 链完整性徽章元素存在", 'id="chainbox"' in admin and "chain_intact" in admin)
 check("E5 admin.html 角色切换调用 set-role",
       "/admin/set-role" in admin and "onchange" in admin)
+
+# ---------- F. UI/UX a11y 守卫（loop engineering 2026-09-04，ui-ux-pro-max 标准） ----------
+# F1 每个页面生效的 CSS（内联 style 或所链接的 .css 文件）都要有键盘焦点样式
+#    + 尊重减弱动效偏好
+ALL_PAGES = ("index.html", "discover.html", "studio.html", "team.html",
+             "plan.html", "portfolio.html", "admin.html")
+for page in ALL_PAGES:
+    body = (PUBLIC / page).read_text(encoding="utf-8")
+    css_all = body
+    for link in re.findall(r'href="\./([a-z_]+\.css)"', body):
+        p = PUBLIC / link
+        if p.exists():
+            css_all += p.read_text(encoding="utf-8")
+    check(f"F1 {page} 生效 CSS 含 :focus-visible 与 prefers-reduced-motion",
+          ":focus-visible" in css_all and "prefers-reduced-motion" in css_all)
+# F2 index 氛围光晕必须在源头裁剪（iOS Safari 忽略 body 的 overflow-x:hidden，
+#    曾导致手机上首页可左右晃动——2026-09-04 浏览器审计发现）
+landing = (PUBLIC / "landing.css").read_text(encoding="utf-8")
+hero_rule = re.search(r"\.hero\s*\{[^}]*\}", landing)
+check("F2 landing.css html 与 .hero 均 overflow-x: clip（防移动端横向漂移）",
+      "overflow-x: clip" in landing and bool(hero_rule)
+      and re.search(r"overflow-x:\s*clip", hero_rule.group(0)))
+# F3 低对比度灰色禁用（#475569 在 12px 文本上仅 2.6:1，低于 4.5 标准）
+check("F3 landing.css 无低对比度灰 #475569/#64748b",
+      "#475569" not in landing and "#64748b" not in landing)
 
 # ---------- 汇总 ----------
 print()

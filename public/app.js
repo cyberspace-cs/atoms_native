@@ -21,7 +21,9 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
   }
   function setBusy(b) {
-    ["genBtn", "refineBtn"].forEach((id) => { const el = $(id); if (el) el.disabled = b; });
+    // publish/share 也一并禁用：生成未完成（version 未落库）时点分享会 404，
+    // 点发布发布的是半成品——2026-09-04 E2E 抓到的真实竞态
+    ["genBtn", "refineBtn", "publishBtn", "shareBtn"].forEach((id) => { const el = $(id); if (el) el.disabled = b; });
     const s = $("streamStatus");
     if (s) { s.textContent = b ? "工作中…" : "空闲"; s.classList.toggle("busy", b); }
   }

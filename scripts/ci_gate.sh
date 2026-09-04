@@ -58,6 +58,7 @@ step "6/8 smoke 全链路" env ATOMS_BASE="http://127.0.0.1:${PORT}" "$PY" tests
 # 时降级为 WARN（不阻塞），本地/有依赖环境全跑。
 if "$PY" -c "import playwright" 2>/dev/null; then
   step "7/8 E2E 用户旅程（真浏览器）" env ATOMS_BASE="http://127.0.0.1:${PORT}" "$PY" tests/e2e_journeys.py
+  step "7b/8 UI 循环守护（溢出/空态/a11y）" env ATOMS_BASE="http://127.0.0.1:${PORT}" "$PY" tests/ui_loop.py
 else
   echo "⚠️ 7/8 E2E 用户旅程：跳过（未安装 playwright）"
 fi
