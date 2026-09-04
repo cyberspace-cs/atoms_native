@@ -184,6 +184,18 @@ check("F2 landing.css html 与 .hero 均 overflow-x: clip（防移动端横向�
 check("F3 landing.css 无低对比度灰 #475569/#64748b",
       "#475569" not in landing and "#64748b" not in landing)
 
+# ---------- G. 发现页做细守卫（2026-09-04 模板扩充：对标 NoCode 品类） ----------
+discover = (PUBLIC / "discover.html").read_text(encoding="utf-8")
+check("G1 发现页可试玩角标：CSS 类与渲染逻辑同时存在",
+      ".playable" in discover and "可试玩" in discover,
+      "has_sample 模板必须在封面渲染「可试玩」角标")
+check("G2 发现页分类 chips 带计数",
+      "renderChips" in discover
+      and re.search(r"filter\([^)]*category[^)]*\)\.length", discover) is not None,
+      "分类 chip 应显示该分类下的模板数量")
+check("G3 发现页示例链接在新窗口打开且隔离",
+      'rel="noopener"' in discover and "/sample" in discover)
+
 # ---------- 汇总 ----------
 print()
 if FAILS:

@@ -193,6 +193,20 @@
       align-items: center;
       justify-content: center;
       font-size: 46px;
+      position: relative
+    }
+
+    .playable {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 10.5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(7, 11, 20, .65);
+      border: 1px solid rgba(16, 185, 129, .55);
+      color: #34d399;
+      letter-spacing: .08em
     }
 
     .g0 {
@@ -415,8 +429,10 @@
 
     function renderChips() {
       const cats = ['全部', ...new Set(ITEMS.map(i => i.category))];
-      document.getElementById('chips').innerHTML = cats.map(c =>
-        `<button class="chip${c === CAT ? ' on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+      document.getElementById('chips').innerHTML = cats.map(c => {
+        const n = c === '全部' ? ITEMS.length : ITEMS.filter(i => i.category === c).length;
+        return `<button class="chip${c === CAT ? ' on' : ''}" data-cat="${esc(c)}">${esc(c)} <span style="opacity:.55">${n}</span></button>`;
+      }).join('');
       document.querySelectorAll('.chip').forEach(b => b.onclick = () => { CAT = b.dataset.cat; renderChips(); renderGrid(); });
     }
 
@@ -427,7 +443,7 @@
       empty.textContent = Q ? `没有找到和「${Q}」相关的模板` : '暂无模板';
       document.getElementById('grid').innerHTML = list.map((it, idx) => `
     <div class="card">
-      <div class="cover g${idx % 4}">${esc(it.emoji)}</div>
+      <div class="cover g${idx % 4}">${esc(it.emoji)}${it.has_sample ? '<span class="playable">可试玩</span>' : ''}</div>
       <div class="body">
         <div class="cat">${esc(it.category)}</div>
         <div class="title">${esc(it.title)}</div>

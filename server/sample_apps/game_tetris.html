@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>俄罗斯方块</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --cell: #1e293b;
+      --text: #e8edf7;
+      --dim: #94a3b8;
+      --cyan: #22d3ee;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, "PingFang SC", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .wrap {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    canvas {
+      background: #0f172a;
+      border-radius: 10px;
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 96px;
+    }
+
+    .box {
+      background: var(--cell);
+      border-radius: 10px;
+      padding: 8px 12px;
+      text-align: center;
+    }
+
+    .box b {
+      display: block;
+      font-size: 17px;
+      color: var(--cyan);
+    }
+
+    .box span {
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    .btn {
+      background: rgba(34, 211, 238, .12);
+      color: var(--cyan);
+      border: 1px solid rgba(34, 211, 238, .45);
+      border-radius: 10px;
+      padding: 7px 0;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(3, 44px);
+      gap: 5px;
+    }
+
+    .keys button {
+      padding: 9px 0;
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      background: var(--cell);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .tip {
+      color: var(--dim);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>俄罗斯方块</h1>
+  <div class="wrap">
+    <canvas id="cv" width="220" height="440"></canvas>
+    <div class="side">
+      <div class="box"><b id="score">0</b><span>得分</span></div>
+      <div class="box"><b id="lines">0</b><span>消行</span></div>
+      <div class="box"><b id="level">1</b><span>等级</span></div>
+      <button class="btn" id="pause" onclick="togglePause()">暂停</button>
+      <button class="btn" onclick="location.reload()">重开</button>
+      <div class="keys">
+        <span></span><button onclick="act(0)">⟲</button><span></span>
+        <button onclick="act(1)">◀</button><button onclick="act(2)">▼</button><button onclick="act(3)">▶</button>
+      </div>
+    </div>
+  </div>
+  <div class="tip">键盘：← → 移动 · ↑ 旋转 · ↓ 加速 · 空格 暂停</div>
+  <script>
+    "use strict";
+    const W = 10, H = 20, S = 22, cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+    const COL = ["#22d3ee", "#f59e0b", "#a78bfa", "#10b981", "#ef4444", "#ec4899", "#facc15"];
+    const SHAPES = [ // 7 种方块矩阵
+      [[1, 1, 1, 1]],                              // I
+      [[1, 1], [1, 1]],                            // O
+      [[0, 1, 0], [1, 1, 1]],                        // T
+      [[0, 1, 1], [1, 1, 0]],                        // S
+      [[1, 1, 0], [0, 1, 1]],                        // Z
+      [[1, 0, 0], [1, 1, 1]],                        // J
+      [[0, 0, 1], [1, 1, 1]]                         // L
+    ];
+    let grid, cur, nxt, score, lines, level, drop, paused, over;
+
+    function spawn() {
+      const t = nxt || rand(); nxt = rand();
+      cur = { m: t.m.map(r => [...r]), x: 3, y: 0, c: t.c };
+      if (hit(cur.x, cur.y)) { over = true; alert("游戏结束！得分 " + score); }
+    }
+    function rand() { const i = Math.random() * 7 | 0; return { m: SHAPES[i].m, c: COL[i] }; }
+    function hit(x, y) {
+      return cur.m.some((row, r) => row.some((v, c) => v && (
+        x + c < 0 || x + c >= W || y + r >= H || (y + r >= 0 && grid[y + r][x + c]))));
+    }
+    function merge() { cur.m.forEach((row, r) => row.forEach((v, c) => { if (v && cur.y + r >= 0) grid[cur.y + r][cur.x + c] = cur.c; })); }
+    function rotate() {
+      const m = cur.m[0].map((_, i) => cur.m.map(r => r[i]).reverse());
+      const old = cur.m; cur.m = m;
+      if (hit(cur.x, cur.y)) cur.m = old; // 简化踢墙：转不了就保持
+    }
+    function sweep() {
+      let n = 0;
+      grid = grid.filter(row => { if (row.every(Boolean)) { n++; return false; } return true; });
+      while (grid.length < H) grid.unshift(Array(W).fill(0));
+      if (n) {
+        lines += n; score += [0, 100, 300, 500, 800][n] * level;
+        level = 1 + (lines / 10 | 0);
+        document.getElementById("score").textContent = score;
+        document.getElementById("lines").textContent = lines;
+        document.getElementById("level").textContent = level;
+      }
+    }
+    function step() {
+      if (paused || over) return;
+      if (!hit(cur.x, cur.y + 1)) cur.y++;
+      else { merge(); sweep(); spawn(); }
+      draw();
+    }
+    function draw() {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      grid.forEach((row, r) => row.forEach((v, c) => { if (v) cell(c, r, v); }));
+      if (cur) cur.m.forEach((row, r) => row.forEach((v, c) => { if (v && cur.y + r >= 0) cell(cur.x + c, cur.y + r, cur.c); }));
+    }
+    function cell(x, y, color) {
+      ctx.fillStyle = color; ctx.fillRect(x * S + 1, y * S + 1, S - 2, S - 2);
+      ctx.fillStyle = "rgba(255,255,255,.18)"; ctx.fillRect(x * S + 1, y * S + 1, S - 2, 3);
+    }
+    function act(k) { // 0旋转 1左 2下 3右
+      if (paused || over) return;
+      if (k === 0) rotate();
+      else if (k === 1 && !hit(cur.x - 1, cur.y)) cur.x--;
+      else if (k === 3 && !hit(cur.x + 1, cur.y)) cur.x++;
+      else if (k === 2 && !hit(cur.x, cur.y + 1)) cur.y++;
+      draw();
+    }
+    function togglePause() { paused = !paused; document.getElementById("pause").textContent = paused ? "继续" : "暂停"; }
+    function reset() {
+      grid = Array.from({ length: H }, () => Array(W).fill(0));
+      score = 0; lines = 0; level = 1; paused = false; over = false; nxt = null;
+      document.getElementById("score").textContent = 0;
+      document.getElementById("lines").textContent = 0;
+      document.getElementById("level").textContent = 1;
+      spawn(); draw();
+    }
+    addEventListener("keydown", e => {
+      if (e.code === "Space") { e.preventDefault(); togglePause(); return; }
+      const m = { ArrowUp: 0, ArrowLeft: 1, ArrowDown: 2, ArrowRight: 3 };
+      if (m[e.code] !== undefined) { e.preventDefault(); act(m[e.code]); }
+    });
+    reset();
+    let last = 0, acc = 0;
+    function loop(t) {
+      acc += t - last; last = t;
+      const speed = Math.max(120, 600 - level * 55);
+      if (acc > speed) { acc = 0; step(); }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打砖块</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --cell: #1e293b;
+      --text: #e8edf7;
+      --dim: #94a3b8;
+      --cyan: #22d3ee;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, "PingFang SC", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .hud {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .hud b {
+      color: var(--cyan);
+    }
+
+    .hud span {
+      color: var(--dim);
+      font-size: 12.5px;
+    }
+
+    canvas {
+      background: #0f172a;
+      border-radius: 10px;
+      touch-action: none;
+      cursor: none;
+    }
+
+    .tip {
+      color: var(--dim);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    #msg {
+      min-height: 18px;
+      font-size: 13px;
+      color: var(--cyan);
+      margin-top: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>打砖块</h1>
+  <div class="hud">
+    <span>得分 <b id="score">0</b></span>
+    <span>生命 <b id="lives">❤❤❤</b></span>
+    <span>关卡 <b id="level">1</b>/3</span>
+  </div>
+  <canvas id="cv" width="480" height="360"></canvas>
+  <div id="msg">移动鼠标 / 手指控制挡板，点击或按空格发球</div>
+  <div class="tip">碰到挡板边缘会改变反弹角度，全清进入下一关</div>
+  <script>
+    "use strict";
+    const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+    const ROWS = 5, COLS = 8, BW = 54, BH = 16, GAP = 4;
+    const COLORS = ["#22d3ee", "#a78bfa", "#10b981", "#f59e0b", "#ec4899"];
+    let paddle, ball, bricks, score, lives, level, running, raf;
+
+    function build() {
+      paddle = { w: 80, x: 200 };
+      bricks = [];
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
+        // 每关砖阵镂空图案不同，营造关卡差异
+        if (level === 2 || r !== 2 || (c > 1 && c < 6))
+          bricks.push({ x: 12 + c * (BW + GAP), y: 40 + r * (BH + GAP), r, alive: true });
+      resetBall();
+    }
+    function resetBall() {
+      ball = { x: 240, y: 300, vx: 3.2 * (Math.random() < .5 ? 1 : -1), vy: -3.8, r: 6 };
+      paddle.x = 200; running = false;
+    }
+    function reset() { score = 0; lives = 3; level = 1; hud(); build(); }
+    function hud() {
+      document.getElementById("score").textContent = score;
+      document.getElementById("lives").textContent = "❤".repeat(lives) || "—";
+      document.getElementById("level").textContent = level;
+    }
+    function launch() {
+      if (running) return;
+      running = true; document.getElementById("msg").textContent = "";
+    }
+    function tick() {
+      if (running) {
+        ball.x += ball.vx; ball.y += ball.vy;
+        if (ball.x < ball.r || ball.x > 480 - ball.r) ball.vx *= -1;
+        if (ball.y < ball.r) ball.vy *= -1;
+        // 挡板碰撞：击中位置决定反弹角度
+        if (ball.vy > 0 && ball.y > 336 && ball.x > paddle.x && ball.x < paddle.x + paddle.w) {
+          const off = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+          const sp = Math.hypot(ball.vx, ball.vy);
+          const ang = off * 1.05; // 约 ±60°
+          ball.vx = sp * Math.sin(ang); ball.vy = -Math.abs(sp * Math.cos(ang));
+        }
+        if (ball.y > 360) {
+          lives--; hud();
+          if (!lives) { running = false; document.getElementById("msg").textContent = "游戏结束！刷新重开"; }
+          resetBall();
+        }
+        bricks.forEach(b => {
+          if (!b.alive) return;
+          if (ball.x > b.x - ball.r && ball.x < b.x + BW + ball.r && ball.y > b.y - ball.r && ball.y < b.y + BH + ball.r) {
+            b.alive = false; score += 10 * level; hud();
+            ball.vy *= -1;
+          }
+        });
+        if (bricks.every(b => !b.alive)) {
+          if (level < 3) { level++; hud(); build(); }
+          else { running = false; document.getElementById("msg").textContent = "🎉 全部通关！得分 " + score; }
+        }
+      }
+      draw();
+      raf = requestAnimationFrame(tick);
+    }
+    function draw() {
+      ctx.clearRect(0, 0, 480, 360);
+      bricks.forEach(b => {
+        if (!b.alive) return;
+        ctx.fillStyle = COLORS[b.r]; ctx.fillRect(b.x, b.y, BW, BH);
+        ctx.fillStyle = "rgba(255,255,255,.15)"; ctx.fillRect(b.x, b.y, BW, 3);
+      });
+      ctx.fillStyle = "#e8edf7"; ctx.fillRect(paddle.x, 340, paddle.w, 8);
+      ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, 7); ctx.fillStyle = "#22d3ee"; ctx.fill();
+    }
+    function movePad(x) { paddle.x = Math.max(0, Math.min(480 - paddle.w, x - paddle.w / 2)); }
+    cv.addEventListener("mousemove", e => movePad(e.offsetX));
+    cv.addEventListener("touchmove", e => { movePad(e.touches[0].clientX - cv.getBoundingClientRect().left); e.preventDefault(); }, { passive: false });
+    cv.addEventListener("click", launch);
+    addEventListener("keydown", e => {
+      if (e.code === "Space") { e.preventDefault(); launch(); }
+      if (e.code === "ArrowLeft") movePad(paddle.x + paddle.w / 2 - 30);
+      if (e.code === "ArrowRight") movePad(paddle.x + paddle.w / 2 + 30);
+    });
+    reset(); tick();
+  </script>
+</body>
+
+</html>

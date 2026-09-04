@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(ROOT, "server"))
 sys.path.insert(0, ROOT)
 
 # ── 1. 单测数量基线（只增不减；新增测试后手动上调）────────────────
-BASELINE_UNIT_TESTS = 55
+BASELINE_UNIT_TESTS = 56
 failures = []
 
 src = open(os.path.join(ROOT, "tests", "unit_tests.py"), encoding="utf-8").read()
@@ -54,6 +54,9 @@ GUARDS = [
     ("server/main.py", "SELECT id,username,role,created_at", "login 响应含 role（2026-09-03 线上 bug 钉死；契约层另有断言）"),
     ("server/discover.py", "publish_item", "发布落库函数"),
     ("server/discover.py", "sort == \"new\"", "发现页排序参数"),
+    ("server/discover.py", "2048 数字滑块", "2026-09-04 模板扩充在位（游戏品类）"),
+    ("server/discover.py", "WHERE title=?", "幂等按标题补种（存量库能长出新模板）"),
+    ("public/discover.html", "playable", "可试玩角标（发现页做细）"),
 ]
 for path, needle, why in GUARDS:
     full = os.path.join(ROOT, path)
@@ -102,7 +105,10 @@ else:
     for field in ("id", "title", "author", "views", "uses", "has_sample", "category"):
         if field not in items[0]:
             failures.append(f"discover 契约破坏：卡片缺 {field}（前端渲染依赖）")
-print("✅ discover 契约：9 字段完整")
+    # 2026-09-04 模板扩充：8 → 18，种子缩水说明扩充被回退
+    if len(items) < 18:
+        failures.append(f"discover 契约破坏：种子模板 {len(items)} < 18（模板扩充被回退）")
+print("✅ discover 契约：9 字段完整 + 模板数 >= 18")
 
 tmp.cleanup()
 

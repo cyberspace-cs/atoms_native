@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单位换算器</title>
+<style>
+  :root { --bg:#0b1120; --cell:#1e293b; --text:#e8edf7; --dim:#94a3b8; --cyan:#22d3ee; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC",sans-serif;
+         min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .card { width:min(420px,100%); background:var(--cell); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:26px; }
+  h1 { font-size:22px; margin-bottom:18px; }
+  .tabs { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .tab { padding:7px 16px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:transparent;
+         color:var(--dim); font-size:13px; cursor:pointer; }
+  .tab.on { background:rgba(34,211,238,.12); color:var(--cyan); border-color:rgba(34,211,238,.45); }
+  .io { display:flex; align-items:center; gap:10px; }
+  .io + .io { margin-top:12px; }
+  .io input { flex:1; background:#0f172a; border:1px solid rgba(255,255,255,.12); border-radius:11px;
+              padding:12px 14px; color:var(--text); font-size:16px; outline:none; min-width:0; }
+  .io input:focus { border-color:rgba(34,211,238,.5); }
+  .io select { background:#0f172a; color:var(--text); border:1px solid rgba(255,255,255,.12);
+               border-radius:11px; padding:11px 8px; font-size:13.5px; outline:none; }
+  .eq { text-align:center; color:var(--dim); font-size:15px; margin:8px 0 0; }
+  #note { color:var(--dim); font-size:12px; margin-top:16px; line-height:1.7; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>📐 单位换算器</h1>
+    <div class="tabs" id="tabs"></div>
+    <div class="io">
+      <input id="a" type="number" value="1" inputmode="decimal" oninput="run()">
+      <select id="au" onchange="run()"></select>
+    </div>
+    <div class="eq">↓ 实时换算</div>
+    <div class="io">
+      <input id="b" readonly>
+      <select id="bu" onchange="run()"></select>
+    </div>
+    <div id="note"></div>
+  </div>
+<script>
+"use strict";
+// 基准单位系数；温度特殊处理
+const UNITS = {
+  长度: { 基准:"米", 表:{ 米:1, 千米:1000, 厘米:.01, 毫米:.001, 英里:1609.344, 英尺:.3048, 英寸:.0254, 海里:1852 },
+          note:"1 英里 = 1.609 千米 · 1 英尺 = 30.48 厘米" },
+  重量: { 基准:"千克", 表:{ 千克:1, 克:.001, 吨:1000, 磅:.4535924, 盎司:.0283495, 斤:.5 },
+          note:"1 千克 = 2 斤 = 2.205 磅" },
+  面积: { 基准:"平方米", 表:{ 平方米:1, 平方千米:1e6, 平方厘米:1e-4, 公顷:1e4, 亩:666.6667, 平方英尺:.092903 },
+          note:"1 亩 ≈ 666.67 平方米 · 1 公顷 = 15 亩" },
+  数据: { 基准:"MB", 表:{ MB:1, KB:1/1024, GB:1024, TB:1048576, Bit:1/8388608 },
+          note:"按 1 GB = 1024 MB 计算" }
+};
+const TEMP = { 基准:"℃", 表:{ "℃":1, "℉":1, "K":1 }, note:"温度按公式换算，非线性" };
+let CAT = "长度";
+
+function tabs() {
+  const cats = [...Object.keys(UNITS), "温度"];
+  document.getElementById("tabs").innerHTML = cats.map(c =>
+    `<button class="tab${c === CAT ? " on" : ""}" data-c="${c}">${c}</button>`).join("");
+  document.querySelectorAll(".tab").forEach(b => b.onclick = () => { CAT = b.dataset.c; tabs(); fill(); run(); });
+}
+function fill() {
+  const names = Object.keys((CAT === "温度" ? TEMP : UNITS[CAT]).表);
+  const au = document.getElementById("au"), bu = document.getElementById("bu");
+  au.innerHTML = names.map(n => `<option>${n}</option>`).join("");
+  bu.innerHTML = names.map((n, i) => `<option${i === 1 ? " selected" : ""}>${n}</option>`).join("");
+  document.getElementById("note").textContent = (CAT === "温度" ? TEMP : UNITS[CAT]).note;
+}
+function toBase(cat, unit, v) {
+  if (cat !== "温度") return v * UNITS[cat].表[unit];
+  if (unit === "℃") return v;
+  if (unit === "℉") return (v - 32) * 5 / 9;
+  return v - 273.15; // K
+}
+function fromBase(cat, unit, v) {
+  if (cat !== "温度") return v / UNITS[cat].表[unit];
+  if (unit === "℃") return v;
+  if (unit === "℉") return v * 9 / 5 + 32;
+  return v + 273.15; // K
+}
+function run() {
+  const a = +document.getElementById("a").value;
+  const u1 = document.getElementById("au").value, u2 = document.getElementById("bu").value;
+  if (isNaN(a)) { document.getElementById("b").value = ""; return; }
+  const out = fromBase(CAT, u2, toBase(CAT, u1, a));
+  document.getElementById("b").value = Number(out.toPrecision(10));
+}
+tabs(); fill(); run();
+</script>
+</body>
+</html>

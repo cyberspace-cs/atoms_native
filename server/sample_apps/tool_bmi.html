@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BMI 健康计算器</title>
+<style>
+  :root { --bg:#0b1120; --cell:#1e293b; --text:#e8edf7; --dim:#94a3b8; --cyan:#22d3ee; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC",sans-serif;
+         min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .card { width:min(400px,100%); background:var(--cell); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:28px; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  .sub { color:var(--dim); font-size:12.5px; margin-bottom:22px; }
+  label { display:block; color:var(--dim); font-size:13px; margin:14px 0 6px; }
+  input { width:100%; background:#0f172a; border:1px solid rgba(255,255,255,.12); border-radius:10px;
+          padding:11px 14px; color:var(--text); font-size:15px; outline:none; }
+  input:focus { border-color:rgba(34,211,238,.5); }
+  .btn { width:100%; margin-top:20px; padding:12px 0; border:none; border-radius:11px; cursor:pointer;
+         background:linear-gradient(90deg,#22d3ee,#a78bfa); color:#08101e; font-size:15px; font-weight:800; }
+  .result { margin-top:20px; text-align:center; display:none; }
+  .bmi { font-size:44px; font-weight:800; color:var(--cyan); }
+  .tag { display:inline-block; margin-top:6px; padding:4px 14px; border-radius:999px; font-size:13px; font-weight:700; }
+  .bar { height:8px; border-radius:99px; margin-top:16px; display:flex; overflow:hidden; }
+  .bar i { flex:1; opacity:.35; }
+  .scale { display:flex; justify-content:space-between; color:var(--dim); font-size:10.5px; margin-top:5px; }
+  .advice { color:var(--dim); font-size:12.5px; line-height:1.7; margin-top:14px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>BMI 健康计算器</h1>
+    <div class="sub">身体质量指数 = 体重(kg) ÷ 身高²(m²)</div>
+    <label>身高（cm）</label>
+    <input id="h" type="number" placeholder="例如 170" inputmode="decimal">
+    <label>体重（kg）</label>
+    <input id="w" type="number" placeholder="例如 60" inputmode="decimal">
+    <button class="btn" onclick="calc()">计算 BMI</button>
+    <div class="result" id="res">
+      <div class="bmi" id="v">--</div>
+      <div class="tag" id="tag">--</div>
+      <div class="bar">
+        <i style="background:#22d3ee"></i><i style="background:#10b981"></i>
+        <i style="background:#f59e0b"></i><i style="background:#ef4444"></i>
+      </div>
+      <div class="scale"><span>偏瘦&lt;18.5</span><span>正常</span><span>超重24</span><span>肥胖≥28</span></div>
+      <div class="advice" id="advice"></div>
+    </div>
+  </div>
+<script>
+"use strict";
+function calc() {
+  const h = +document.getElementById("h").value / 100, w = +document.getElementById("w").value;
+  if (!h || !w || h <= 0 || w <= 0) return;
+  const bmi = w / (h * h), v = Math.round(bmi * 10) / 10;
+  document.getElementById("res").style.display = "block";
+  document.getElementById("v").textContent = v.toFixed(1);
+  const tag = document.getElementById("tag"), adv = document.getElementById("advice");
+  let color, text;
+  if (v < 18.5)      { color = "#22d3ee"; text = "偏瘦"; adv.textContent = "营养摄入略不足，建议增加优质蛋白与力量训练。"; }
+  else if (v < 24)   { color = "#10b981"; text = "正常"; adv.textContent = "很棒！保持规律作息与均衡饮食。"; }
+  else if (v < 28)   { color = "#f59e0b"; text = "超重"; adv.textContent = "建议每周 150 分钟中等强度运动，注意控制精制碳水。"; }
+  else               { color = "#ef4444"; text = "肥胖"; adv.textContent = "健康风险升高，建议咨询医生或营养师制定减重计划。"; }
+  tag.textContent = text; tag.style.background = color + "22"; tag.style.color = color;
+}
+</script>
+</body>
+</html>

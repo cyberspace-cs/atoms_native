@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AtomFlow · 让团队效率翻十倍</title>
+<style>
+  :root { --bg:#0b1120; --bg2:#0f172a; --text:#e8edf7; --dim:#94a3b8; --cyan:#22d3ee; --violet:#a78bfa; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC",sans-serif; line-height:1.6; }
+  .wrap { max-width:1020px; margin:0 auto; padding:0 24px; }
+  nav { display:flex; align-items:center; gap:26px; padding:20px 0; }
+  .logo { font-weight:800; font-size:17px; }
+  .logo i { color:var(--cyan); font-style:normal; }
+  nav a { color:var(--dim); font-size:13.5px; text-decoration:none; }
+  nav a:hover { color:var(--text); }
+  .cta { margin-left:auto; background:linear-gradient(90deg,#22d3ee,#a78bfa); color:#08101e; padding:9px 20px;
+         border-radius:999px; font-weight:700; font-size:13.5px; text-decoration:none; }
+  .hero { text-align:center; padding:80px 0 60px; }
+  .badge { display:inline-block; padding:5px 14px; border-radius:999px; border:1px solid rgba(34,211,238,.4);
+           color:var(--cyan); font-size:12px; margin-bottom:20px; }
+  h1 { font-size:clamp(30px,5.4vw,50px); font-weight:800; letter-spacing:-.02em; line-height:1.25; }
+  h1 span { background:linear-gradient(90deg,#22d3ee,#a78bfa); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero p { color:var(--dim); max-width:520px; margin:18px auto 30px; font-size:15.5px; }
+  .btns { display:flex; gap:12px; justify-content:center; }
+  .btns a { padding:12px 28px; border-radius:12px; font-size:14.5px; font-weight:700; text-decoration:none; }
+  .primary { background:linear-gradient(90deg,#22d3ee,#a78bfa); color:#08101e; }
+  .ghost { border:1px solid rgba(255,255,255,.2); color:var(--text); }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin:60px 0; }
+  .stat { background:var(--bg2); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:26px; text-align:center; }
+  .stat b { font-size:30px; color:var(--cyan); }
+  .stat span { display:block; color:var(--dim); font-size:12.5px; margin-top:4px; }
+  h2 { font-size:26px; text-align:center; margin-bottom:8px; }
+  .secsub { text-align:center; color:var(--dim); font-size:14px; margin-bottom:36px; }
+  .feats { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .feat { background:var(--bg2); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:24px; }
+  .feat .ico { font-size:26px; }
+  .feat h3 { font-size:15.5px; margin:10px 0 6px; }
+  .feat p { color:var(--dim); font-size:13px; }
+  .price { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:10px; }
+  .plan { background:var(--bg2); border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:26px; }
+  .plan.hot { border-color:rgba(34,211,238,.5); }
+  .plan .name { color:var(--cyan); font-size:12.5px; letter-spacing:.15em; }
+  .plan .p { font-size:34px; font-weight:800; margin:8px 0; }
+  .plan .p small { font-size:13px; color:var(--dim); font-weight:400; }
+  .plan ul { list-style:none; color:var(--dim); font-size:13px; }
+  .plan li { padding:5px 0; }
+  .plan li::before { content:"✓ "; color:#10b981; }
+  .plan a { display:block; text-align:center; margin-top:18px; padding:10px 0; border-radius:10px;
+            border:1px solid rgba(34,211,238,.4); color:var(--cyan); text-decoration:none; font-size:13.5px; }
+  footer { text-align:center; color:var(--dim); font-size:12.5px; padding:50px 0 30px; }
+  @media (max-width:720px) { .feats,.price,.stats { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <div class="logo">Atom<i>Flow</i></div>
+      <a href="#feat">功能</a><a href="#price">价格</a>
+      <a class="cta" href="#price">免费开始</a>
+    </nav>
+    <div class="hero">
+      <div class="badge">🚀 全新 3.0 已上线</div>
+      <h1>让团队协作效率<br><span>翻十倍</span>的工作台</h1>
+      <p>任务、文档、数据看板，一个工作台全部搞定。5 分钟上手，无需培训，3000+ 团队的共同选择。</p>
+      <div class="btns"><a class="primary" href="#price">免费试用 14 天</a><a class="ghost" href="#feat">了解功能 →</a></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>3,000+</b><span>团队正在使用</span></div>
+      <div class="stat"><b>99.99%</b><span>服务可用性</span></div>
+      <div class="stat"><b>4.9 / 5</b><span>用户满意度</span></div>
+    </div>
+    <div id="feat">
+      <h2>为什么选择 AtomFlow</h2>
+      <div class="secsub">把工具链收拢到一个地方，专注真正重要的事</div>
+      <div class="feats">
+        <div class="feat"><div class="ico">📋</div><h3>项目看板</h3><p>拖拽式任务管理，进度一目了然，支持里程碑与依赖关系。</p></div>
+        <div class="feat"><div class="ico">📊</div><h3>实时数据看板</h3><p>接入业务数据自动出图，团队目标完成率实时同步。</p></div>
+        <div class="feat"><div class="ico">🤖</div><h3>AI 助手</h3><p>自动生成会议纪要与周报，重复工作交给 AI。</p></div>
+      </div>
+    </div>
+    <div id="price" style="margin-top:80px">
+      <h2>简单透明的价格</h2>
+      <div class="secsub">随时升级或取消，不绑卡</div>
+      <div class="price">
+        <div class="plan"><div class="name">免费版</div><div class="p">¥0<small> /月</small></div>
+          <ul><li>最多 5 人</li><li>3 个项目</li><li>基础看板</li></ul><a href="#">开始使用</a></div>
+        <div class="plan hot"><div class="name">专业版</div><div class="p">¥39<small> /人/月</small></div>
+          <ul><li>不限项目</li><li>数据看板</li><li>AI 助手</li><li>优先支持</li></ul><a href="#">试用 14 天</a></div>
+        <div class="plan"><div class="name">企业版</div><div class="p">定制<small></small></div>
+          <ul><li>私有部署</li><li>SSO 单点登录</li><li>专属客户成功</li></ul><a href="#">联系我们</a></div>
+      </div>
+    </div>
+    <footer>© 2026 AtomFlow · 用 <a href="./index.html" style="color:var(--cyan)">Atoms Native</a> 一句话生成</footer>
+  </div>
+</body>
+</html>

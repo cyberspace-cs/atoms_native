@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>诚邀见证 · 婚礼邀请函</title>
+<style>
+  :root { --bg:#0b1120; --cell:#1e293b; --text:#e8edf7; --dim:#94a3b8; --cyan:#22d3ee; --pink:#f9a8d4; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:radial-gradient(900px 500px at 50% -10%, rgba(249,168,212,.14), transparent), var(--bg);
+         color:var(--text); font-family:-apple-system,"PingFang SC",serif; min-height:100vh; text-align:center; }
+  .wrap { max-width:520px; margin:0 auto; padding:56px 24px 70px; }
+  .names { font-size:34px; font-weight:300; letter-spacing:.18em; margin:18px 0 6px; }
+  .names b { font-weight:600; background:linear-gradient(90deg,#f9a8d4,#22d3ee); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .amp { color:var(--pink); font-size:22px; margin:0 10px; }
+  .date { color:var(--dim); font-size:14px; letter-spacing:.3em; margin-top:10px; }
+  .divider { width:60px; height:1px; background:linear-gradient(90deg,transparent,var(--pink),transparent); margin:26px auto; }
+  .story { color:var(--dim); font-size:13.5px; line-height:2; }
+  .cd { display:flex; justify-content:center; gap:12px; margin:30px 0 8px; }
+  .cd div { background:var(--cell); border:1px solid rgba(249,168,212,.3); border-radius:12px; padding:12px 0; width:64px; }
+  .cd b { display:block; font-size:22px; color:var(--pink); font-weight:700; }
+  .cd span { font-size:10.5px; color:var(--dim); }
+  .venue { background:var(--cell); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:22px; margin-top:30px; text-align:left; }
+  .venue h3 { font-size:15px; margin-bottom:10px; color:var(--pink); font-weight:600; }
+  .venue p { color:var(--dim); font-size:13px; line-height:1.9; }
+  .rsvp { margin-top:22px; background:var(--cell); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:22px; }
+  .rsvp h3 { font-size:15px; margin-bottom:14px; font-weight:600; }
+  .rsvp input { width:100%; background:#0f172a; border:1px solid rgba(255,255,255,.12); border-radius:10px;
+                padding:11px 13px; color:var(--text); font-size:14px; outline:none; margin-bottom:10px; }
+  .rsvp input:focus { border-color:rgba(249,168,212,.5); }
+  .radio { display:flex; gap:10px; }
+  .radio label { flex:1; padding:10px 0; border-radius:10px; border:1px solid rgba(255,255,255,.14);
+                 color:var(--dim); font-size:13.5px; cursor:pointer; }
+  .radio input { display:none; }
+  .radio input:checked + span { color:var(--pink); }
+  .radio label:has(input:checked) { border-color:rgba(249,168,212,.55); background:rgba(249,168,212,.08); }
+  .btn { width:100%; margin-top:14px; padding:12px 0; border:none; border-radius:11px; cursor:pointer;
+         background:linear-gradient(90deg,#f9a8d4,#22d3ee); color:#08101e; font-size:14.5px; font-weight:800; }
+  #thx { color:var(--pink); font-size:13.5px; margin-top:12px; min-height:18px; }
+  footer { color:var(--dim); font-size:11.5px; margin-top:36px; letter-spacing:.2em; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="font-size:34px">💍</div>
+    <div class="names"><b>子涵</b><span class="amp">&</span><b>雨桐</b></div>
+    <div class="date">2026 年 10 月 18 日 · 星期日</div>
+    <div class="divider"></div>
+    <p class="story">我们从 2019 年的秋天相识，<br>一起看过 6 年的春夏秋冬。<br>人生的重要时刻，诚挚邀请您前来见证。</p>
+    <div class="cd">
+      <div><b id="d">--</b><span>天</span></div>
+      <div><b id="h">--</b><span>时</span></div>
+      <div><b id="m">--</b><span>分</span></div>
+      <div><b id="s">--</b><span>秒</span></div>
+    </div>
+    <div class="venue">
+      <h3>📍 婚礼信息</h3>
+      <p>时间：2026 年 10 月 18 日 12:08（恭候 11:30）<br>
+         地点：云澜湾酒店 · 三层宴会厅<br>
+         地址：杭州市西湖区龙井路 88 号<br>
+         地铁 4 线路「龙井站」B 口步行 300 米</p>
+    </div>
+    <div class="rsvp">
+      <h3>敬盼回复（10 月 1 日前）</h3>
+      <input id="name" type="text" placeholder="您的姓名">
+      <input id="count" type="number" min="1" max="5" placeholder="随行人数（含您）">
+      <div class="radio">
+        <label><input type="radio" name="att" value="yes" checked><span>🥂 欣然赴宴</span></label>
+        <label><input type="radio" name="att" value="no"><span>🙏 心意领了</span></label>
+      </div>
+      <button class="btn" onclick="rsvp()">提交回执</button>
+      <div id="thx"></div>
+    </div>
+    <footer>WITH LOVE · Z & Y</footer>
+  </div>
+<script>
+"use strict";
+const WED = new Date("2026-10-18T12:08:00+08:00").getTime();
+setInterval(() => {
+  const t = Math.max(0, WED - Date.now());
+  document.getElementById("d").textContent = t / 864e5 | 0;
+  document.getElementById("h").textContent = String(t / 36e5 % 24 | 0).padStart(2, "0");
+  document.getElementById("m").textContent = String(t / 6e4 % 60 | 0).padStart(2, "0");
+  document.getElementById("s").textContent = String(t / 1e3 % 60 | 0).padStart(2, "0");
+}, 1000);
+function rsvp() {
+  const n = document.getElementById("name").value.trim();
+  document.getElementById("thx").textContent = n ? `收到，${n}！期待与您相见 🎉` : "请先填写姓名哦";
+}
+</script>
+</body>
+</html>

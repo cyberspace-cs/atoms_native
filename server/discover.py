@@ -15,12 +15,27 @@ import os
 
 import database
 
-# 本地真实示例：策展生成的完整可玩应用（回填到 sample_html，发现页可预览）
+# 本地真实示例：策展生成的完整可玩应用（回填到 sample_html，发现页可预览）。
+# 2026-09-04 模板扩充：对标 NoCode/豆包类模板市场品类（小游戏/工具/页面），
+# 著名单文件小游戏（2048/俄罗斯方块/扫雷/记忆翻牌/打砖块）全部可试玩。
+_APPS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_apps")
 SAMPLE_APPS = {
-    "贪吃蛇小游戏": os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_apps", "snake.html"),
+    "贪吃蛇小游戏": os.path.join(_APPS_DIR, "snake.html"),
+    "2048 数字滑块": os.path.join(_APPS_DIR, "game_2048.html"),
+    "俄罗斯方块": os.path.join(_APPS_DIR, "game_tetris.html"),
+    "扫雷": os.path.join(_APPS_DIR, "game_minesweeper.html"),
+    "记忆翻牌": os.path.join(_APPS_DIR, "game_memory.html"),
+    "打砖块": os.path.join(_APPS_DIR, "game_breakout.html"),
+    "BMI 健康计算器": os.path.join(_APPS_DIR, "tool_bmi.html"),
+    "密码生成器": os.path.join(_APPS_DIR, "tool_password.html"),
+    "单位换算器": os.path.join(_APPS_DIR, "tool_converter.html"),
+    "SaaS 产品落地页": os.path.join(_APPS_DIR, "page_landing.html"),
+    "婚礼邀请函": os.path.join(_APPS_DIR, "page_wedding.html"),
 }
 
-# 精选模板（官方 curated，社区扩展的口子留在 discover_items 表本身）
+# 精选模板（官方 curated，社区扩展的口子留在 discover_items 表本身）。
+# 品类对标：小游戏（经典街机/益智）、工具（计算/生成/换算）、生活（打卡/记账/邀请函）、
+# 官网（个人主页/产品落地页）、可视化（教学演示）——覆盖「新用户第一秒不知道说什么」的高频意图。
 SEED_ITEMS = [
     ("团队饮水打卡工具", "帮团队记录每日饮水与目标打卡，自动出统计图表",
      "一个帮团队管理每日饮水与目标打卡的小工具，带统计图表", "工具", "taoxie", "💧"),
@@ -38,6 +53,27 @@ SEED_ITEMS = [
      "一个活动倒计时页面，显示距离目标日期的天数时分秒，背景渐变，可自定义标题", "生活", "Atoms 团队", "⏳"),
     ("团队待办清单", "添加、勾选、删除任务，按完成状态分组",
      "一个团队待办清单工具，可添加、勾选、删除任务，按完成状态分组显示", "工具", "taoxie", "✅"),
+    # ── 2026-09-04 模板扩充（对标 NoCode 模板市场品类）──────────
+    ("2048 数字滑块", "经典数字合并游戏，方向键/滑动操作，最高分本地保存",
+     "一个 2048 数字合并小游戏，键盘方向键和触屏滑动操作，记录得分和最高分", "游戏", "Atoms 团队", "🔢"),
+    ("俄罗斯方块", "经典 Tetris，旋转加速消行，带等级与触屏按键",
+     "一个俄罗斯方块小游戏，方块旋转下落消行得分，等级越高速度越快", "游戏", "Atoms 团队", "🧱"),
+    ("扫雷", "Windows 经典扫雷，三档难度，首击必安全，右键插旗",
+     "一个扫雷小游戏，三档难度，第一次点击保证安全，支持插旗标记", "游戏", "Atoms 团队", "💣"),
+    ("记忆翻牌", "8 对 emoji 配对，记步数与用时，锻炼记忆力",
+     "一个记忆翻牌配对小游戏，8 对卡片翻开配对，记录步数和用时", "游戏", "Atoms 团队", "🎴"),
+    ("打砖块", "街机经典 Breakout，3 关 3 命，挡板角度控制反弹",
+     "一个打砖块小游戏，移动挡板弹球击碎砖块，三个关卡三条生命", "游戏", "Atoms 团队", "🧨"),
+    ("BMI 健康计算器", "输入身高体重即时算 BMI，四档健康分级与建议",
+     "一个 BMI 健康计算器，输入身高体重计算身体质量指数并给出健康分级建议", "工具", "Atoms 团队", "⚖️"),
+    ("密码生成器", "长度/字符集自定义，密码学随机源，实时强度评估",
+     "一个密码生成器，可自定义长度和字符类型，使用密码学随机数生成高强度密码", "工具", "Atoms 团队", "🔐"),
+    ("单位换算器", "长度/重量/面积/数据/温度五类实时换算",
+     "一个单位换算器，支持长度重量面积数据存储和温度的实时相互换算", "工具", "Atoms 团队", "📐"),
+    ("SaaS 产品落地页", "Hero/数据/功能/定价四段式，转化导向深色设计",
+     "一个 SaaS 产品落地页，含 Hero 区数据展示功能介绍和定价方案，深色渐变风格", "官网", "Atoms 团队", "🛰️"),
+    ("婚礼邀请函", "渐变姓名 + 婚礼倒计时 + 场地信息 + 在线回执",
+     "一个婚礼电子邀请函，显示新人姓名婚礼倒计时和场地信息，带在线出席回执表单", "生活", "Atoms 团队", "💌"),
 ]
 
 
@@ -58,16 +94,21 @@ def _backfill_samples(conn):
 
 
 def ensure_seed():
-    """表为空时灌入精选模板，并回填真实示例。任何异常吞掉（种子缺失不能影响主服务）。"""
+    """精选模板按标题幂等补种（存量库也能长出新增模板，绝不重复），并回填真实示例。
+
+    2026-09-04 之前是「表空才灌全量」，导致已部署环境永远拿不到新模板；
+    改为逐条检查 title 是否存在，缺哪条补哪条。任何异常吞掉（种子缺失不能影响主服务）。
+    """
     try:
         conn = database.get_conn()
-        n = conn.execute("SELECT COUNT(*) c FROM discover_items").fetchone()["c"]
-        if n == 0:
-            for title, desc, idea, cat, author, emoji in SEED_ITEMS:
+        for title, desc, idea, cat, author, emoji in SEED_ITEMS:
+            exists = conn.execute(
+                "SELECT 1 FROM discover_items WHERE title=?", (title,)).fetchone()
+            if not exists:
                 conn.execute(
                     "INSERT INTO discover_items(title,description,idea,category,author,emoji)"
                     " VALUES(?,?,?,?,?,?)", (title, desc, idea, cat, author, emoji))
-            conn.commit()
+        conn.commit()
         _backfill_samples(conn)
         conn.close()
     except Exception:

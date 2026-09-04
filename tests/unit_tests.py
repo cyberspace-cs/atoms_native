@@ -448,13 +448,32 @@ class TestDiscover(unittest.TestCase):
     def test_seed_and_list(self):
         self.disc.ensure_seed()
         items = self.disc.list_items()
-        self.assertGreaterEqual(len(items), 8)
+        self.assertGreaterEqual(len(items), 18)
+        # 2026-09-04 模板扩充：10 个新模板（对标 NoCode 品类）必须全部在位
+        titles = {i["title"] for i in items}
+        for t in ("2048 数字滑块", "俄罗斯方块", "扫雷", "记忆翻牌", "打砖块",
+                  "BMI 健康计算器", "密码生成器", "单位换算器",
+                  "SaaS 产品落地页", "婚礼邀请函"):
+            self.assertIn(t, titles)
         # 惰性种子幂等：再灌一次不重复
         self.disc.ensure_seed()
         self.assertEqual(len(self.disc.list_items()), len(items))
         # 字段完整：idea 可直接作为生成输入
         for it in items:
             self.assertTrue(it["title"] and it["idea"] and it["category"])
+
+    def test_sample_apps_files_exist(self):
+        """SAMPLE_APPS 引用的每个本地示例文件必须真实存在且是完整 HTML。
+
+        模板扩充最容易犯的错：SEED_ITEMS 加了卡片、忘了放 HTML 文件，
+        发现页「▶ 真实示例」点开就是 404。在单测层钉死。
+        """
+        self.assertGreaterEqual(len(self.disc.SAMPLE_APPS), 11)
+        for title, path in self.disc.SAMPLE_APPS.items():
+            self.assertTrue(os.path.exists(path), f"{title} 的示例文件缺失: {path}")
+            with open(path, encoding="utf-8") as f:
+                html = f.read()
+            self.assertIn("</html>", html, f"{title} 的示例 HTML 不完整")
 
     def test_add_view(self):
         self.disc.ensure_seed()
@@ -499,13 +518,16 @@ class TestDiscover(unittest.TestCase):
         self.assertIsNone(self.disc.get_sample(99999))
 
     def test_backfill_samples_from_local_files(self):
-        """真实示例回填：种子后贪吃蛇应有完整 sample_html；幂等；文件缺失不抛错。"""
+        """真实示例回填：种子后贪吃蛇/2048 应有完整 sample_html；幂等；文件缺失不抛错。"""
         import database
         self.disc.ensure_seed()
         conn = database.get_conn()
         row = conn.execute("SELECT sample_html FROM discover_items WHERE title='贪吃蛇小游戏'").fetchone()
         self.assertTrue(row and row["sample_html"], "贪吃蛇模板应回填 sample_html")
         self.assertIn("</html>", row["sample_html"])
+        # 新增模板同样回填（2026-09-04 扩充回归点）
+        row2048 = conn.execute("SELECT sample_html FROM discover_items WHERE title='2048 数字滑块'").fetchone()
+        self.assertTrue(row2048 and row2048["sample_html"], "2048 模板应回填 sample_html")
         before = row["sample_html"]
         conn.close()
         # 幂等：再跑一次不会重复/清空已有 sample
