@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const state = { token: localStorage.getItem("an_token") || "", user: null, current: null, currentTitle: "", models: [], code: "", versionId: null, securityScore: null, securityFindings: null, securitySummary: null, feedbackSent: false };
+  const state = { token: localStorage.getItem("an_token") || "", user: null, current: null, currentTitle: "", code: "", versionId: null, securityScore: null, securityFindings: null, securitySummary: null, feedbackSent: false };
 
   // ---------- helpers ----------
   function authHeader() { return state.token ? { Authorization: "Bearer " + state.token } : {}; }
@@ -21,7 +21,7 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
   }
   function setBusy(b) {
-    ["genBtn", "raceBtn", "refineBtn"].forEach((id) => { const el = $(id); if (el) el.disabled = b; });
+    ["genBtn", "refineBtn"].forEach((id) => { const el = $(id); if (el) el.disabled = b; });
     const s = $("streamStatus");
     if (s) { s.textContent = b ? "工作中…" : "空闲"; s.classList.toggle("busy", b); }
   }
@@ -226,10 +226,6 @@
           addNote("🔐 安全扫描得分 <b>" + ev.score + "/100</b>" + (findings ? "<br>" + findings : " · 未发现高危问题"), "🛡️");
         }
         break;
-      case "race_done":
-        addNote("Race 完成，最优模型：" + (ev.winner || "?"), "🏁");
-        markPhase("done"); highlightTeam(null);
-        break;
       case "done":
         markPhase("done"); highlightTeam(null);
         if (typeof ev.security === "number") { state.securityScore = ev.security; updateSecurityBadge(ev.security); }
@@ -349,15 +345,6 @@
       await streamPost("./api/refine", { project_id: state.current, message: msg, model: $("modelSel").value || null }, onEvent);
       $("refineInput").value = "";
     } catch (e) { toast("精修失败：" + e.message); markAllStopped(); }
-    finally { setBusy(false); }
-  }
-  async function doRace() {
-    if (!state.current) { toast("请先生成或打开一个项目"); return; }
-    let models = state.models.filter((m) => m.on).map((m) => m.id);
-    if (!models.length) models = ["deepseek"];
-    setBusy(true); resetStream();
-    try { await streamPost("./api/race", { project_id: state.current, models }, onEvent); }
-    catch (e) { toast("Race 失败：" + e.message); markAllStopped(); }
     finally { setBusy(false); }
   }
   async function doExport() {
@@ -566,7 +553,7 @@
     await loadProjects();
   }
 
-  // ---------- models / race UI ----------
+  // ---------- models UI ----------
   async function loadModels() {
     try {
       const d = await api("GET", "/models");
@@ -587,19 +574,6 @@
       // be account-gated) stay selectable but aren't the default.
       const hasDirect = choices.some((c) => c.id === "deepseek");
       if (hasDirect) sel.value = "deepseek";
-      // race model list (toggle chips) — also from choices
-      state.models = choices.map((c, i) => ({
-        id: c.id, label: c.label,
-        on: hasDirect ? (c.id === "deepseek") : (i < Math.min(2, choices.length)),
-      }));
-      const ml = $("modelList"); ml.innerHTML = "";
-      state.models.forEach((m) => {
-        const c = document.createElement("span");
-        c.className = "model-chip" + (m.on ? " on" : "");
-        c.textContent = m.label;
-        c.onclick = () => { m.on = !m.on; c.classList.toggle("on", m.on); };
-        ml.appendChild(c);
-      });
     } catch (e) { toast("加载模型失败"); }
   }
 
@@ -615,7 +589,6 @@
     $("authForm").onsubmit = submitAuth;
     $("logoutBtn").onclick = logout;
     $("genBtn").onclick = doGenerate;
-    $("raceBtn").onclick = doRace;
     $("refineBtn").onclick = doRefine;
     $("refineInput").addEventListener("keydown", (e) => { if (e.key === "Enter") doRefine(); });
     $("rollbackBtn").onclick = toggleVersionPanel;

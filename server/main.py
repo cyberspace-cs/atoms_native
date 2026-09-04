@@ -348,8 +348,9 @@ def refine(req: RefineReq, user=Depends(require_user),
 
 
 @app.post("/api/race")
-def race(req: RaceReq, user=Depends(require_user),
+def race(req: RaceReq, user=Depends(require_role("admin")),
          request: Request = None, authorization: str | None = Header(default=None)):
+    """Race 模式不对普通用户开放（产品决策）：仅 admin 可调用，前端无入口。"""
     p = _get_project(req.project_id, user)
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")

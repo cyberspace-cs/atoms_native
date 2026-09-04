@@ -439,39 +439,8 @@ textarea {
   border-color: rgba(255, 180, 84, .4)
 }
 
-.stream-card,
-.race-card {
+.stream-card {
   padding: 16px
-}
-
-/* Race 折叠面板：默认只占一行，点开才展开，降低视觉噪音 */
-details.race-card summary {
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 6px
-}
-
-details.race-card summary::-webkit-details-marker {
-  display: none
-}
-
-details.race-card summary::after {
-  content: "▸";
-  margin-left: auto;
-  color: var(--muted);
-  transition: transform .2s
-}
-
-details.race-card[open] summary::after {
-  transform: rotate(90deg)
-}
-
-details.race-card .models {
-  margin-top: 12px
 }
 
 .stream {
@@ -551,29 +520,6 @@ details.race-card .models {
     opacity: 1;
     transform: none
   }
-}
-
-.models {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px
-}
-
-.model-chip {
-  font-size: 12px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-brd);
-  background: rgba(255, 255, 255, .03);
-  cursor: pointer;
-  user-select: none
-}
-
-.model-chip.on {
-  background: linear-gradient(135deg, rgba(91, 140, 255, .25), rgba(155, 107, 255, .25));
-  border-color: var(--accent);
-  color: #fff
 }
 
 /* ===== PREVIEW ===== */

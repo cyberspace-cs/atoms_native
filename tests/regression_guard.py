@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(ROOT, "server"))
 sys.path.insert(0, ROOT)
 
 # ── 1. 单测数量基线（只增不减；新增测试后手动上调）────────────────
-BASELINE_UNIT_TESTS = 53
+BASELINE_UNIT_TESTS = 54
 failures = []
 
 src = open(os.path.join(ROOT, "tests", "unit_tests.py"), encoding="utf-8").read()

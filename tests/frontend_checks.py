@@ -102,11 +102,12 @@ bad_js = [p for p in js_paths if not path_matches(routes, p)]
 check("B2 app.js 的 API 路径全部可匹配后端路由", not bad_js, f"未匹配: {bad_js}")
 
 # ---------- C. 回归守卫：busy 状态必须总能解除 ----------
-# C1 三处 streamPost 调用（generate/refine/race）都必须 finally setBusy(false)
+# C1 两处 streamPost 调用（generate/refine）都必须 finally setBusy(false)
+# （race 已于 2026-09-04 下线，不再有第三处）
 stream_calls = len(re.findall(r"await streamPost\(", app_js))
 finally_busy = len(re.findall(r"finally \{ setBusy\(false\); \}", app_js))
-check("C1 三处 SSE 调用都有 finally 解除 busy（流断/无 done 事件不卡死）",
-      stream_calls == 3 and finally_busy == 3, f"streamPost={stream_calls}, finally={finally_busy}")
+check("C1 两处 SSE 调用都有 finally 解除 busy（流断/无 done 事件不卡死）",
+      stream_calls == 2 and finally_busy == 2, f"streamPost={stream_calls}, finally={finally_busy}")
 
 # C2 error 事件处理必须停表（setBusy(false)），否则「一直显示生成任务」复发
 err_block = re.search(r'case "error":.*?break;', app_js, flags=re.S)
@@ -121,14 +122,19 @@ check("C3 markAllStopped 清除 running 态", bool(helper)
 
 # C4 关键 CSS 类存在（busy 状态徽章 / running 圆点 / toast 显示）
 css = (PUBLIC / "styles.css").read_text(encoding="utf-8")
-for cls in (".status.busy", ".agent.running", ".toast.show", "details.race-card"):
+for cls in (".status.busy", ".agent.running", ".toast.show"):
     check(f"C4 样式类存在: {cls}", cls in css)
 
 # ---------- D. 结构守卫（防编辑器旧缓冲把结构改回去；空白容忍，容忍格式化折行） ----------
 check("D1 studio.html 主区无 team-card（团队详情移至 team.html）", "team-card" not in studio)
-check("D2 studio.html Race 为 details 折叠面板",
-      bool(re.search(r'<details\s+class="race-card', studio))
-      and "raceBtn" in studio)
+# D2（2026-09-04 反转）：Race 模式不对用户开放——前端任何页面不得出现 Race 入口
+race_leftovers = []
+for page in ("studio.html", "index.html", "team.html"):
+    body = (PUBLIC / page).read_text(encoding="utf-8")
+    if re.search(r"race-card|raceBtn|race-banner|api/race|Race Mode", body, flags=re.I):
+        race_leftovers.append(page)
+check("D2 前端页面无任何 Race 入口（Race 不对用户开放）", not race_leftovers,
+      f"残留: {race_leftovers}")
 team_html = (PUBLIC / "team.html").read_text(encoding="utf-8")
 check("D3 team.html 存在且含四位成员卡", team_html.count('class="member-card"') == 4)
 check("D4 studio.html 有 AI 团队入口链接", 'href="./team.html"' in studio)

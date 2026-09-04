@@ -164,7 +164,12 @@ def run(page):
     # ── 8. 作品集统计最终态 ──────────────────────────────────
     print("[8] 作品集统计")
     page.goto(f"{BASE}/portfolio.html?u={USER_A}")
-    page.wait_for_selector(".stat")
+    # .stat 节点是静态 HTML（数字初始 0），不能当就绪信号——等异步 fetch 真正
+    # 落地（nWorks >= 1，作者已发布过）再读数。2026-09-04 抓到的假就绪竞态。
+    for _ in range(30):
+        if int(page.locator("#nWorks").inner_text() or "0") >= 1:
+            break
+        page.wait_for_timeout(500)
     uses_n = int(page.locator("#nUses").inner_text())
     check("作品集被 Remix 数 >= 1", lambda: (_ for _ in ()).throw(
         AssertionError(f"nUses={uses_n}")) if uses_n < 1 else None)

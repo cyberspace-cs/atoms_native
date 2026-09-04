@@ -153,14 +153,6 @@ b { color: #fff; }
 .step h3 { font-size: 16.5px; margin-bottom: 6px; }
 .step p { font-size: 13px; color: var(--dim); }
 .arrow { align-self: center; color: var(--cyan); font-size: 22px; opacity: .7; }
-.race-banner {
-  margin-top: 34px; padding: 26px 30px;
-  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
-  border-color: rgba(167, 139, 250, .35);
-  background: linear-gradient(90deg, rgba(167,139,250,.10), rgba(34,211,238,.08));
-}
-.race-banner h3 { font-size: 19px; margin-bottom: 6px; }
-.race-banner p { color: var(--dim); font-size: 14px; }
 
 /* highlights */
 .hl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }

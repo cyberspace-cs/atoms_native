@@ -672,6 +672,19 @@ class TestAdminConsole(unittest.TestCase):
         self.assertEqual(r2.status_code, 200)
         self.assertIn("role", r2.json()["user"])
 
+    def test_race_closed_to_users(self):
+        """产品决策（2026-09-04）：Race 模式不对用户开放。
+
+        前端入口已全部移除，后端 /api/race 收紧为仅 admin：
+        未登录 401、普通用户 403（依赖链在 body 校验前拦截）。
+        """
+        r_anon = self.client.post("/api/race", json={"project_id": 1, "models": ["deepseek"]})
+        self.assertEqual(r_anon.status_code, 401)
+        r_plain = self.client.post("/api/race",
+                                   headers={"Authorization": "Bearer " + self.token_plain},
+                                   json={"project_id": 1, "models": ["deepseek"]})
+        self.assertEqual(r_plain.status_code, 403)
+
     def test_make_admin_script_states(self):
         """提权脚本：user->admin / 幂等 / 用户不存在 三态（独立用户，不污染 RBAC 用例）。"""
         self.main.create_user("script_user", "pass1234")
