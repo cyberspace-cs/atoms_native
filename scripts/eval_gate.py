@@ -4,7 +4,7 @@
 读取 server/evals/_eval_report.json，按以下规则判定，任何一条不满足即 exit 1（红）：
   1. structured_output_gate_pass == True（结构化输出有效性 >= 0.98）
   2. all_cases_pass == True（全部 case valid_rate >= 0.99）
-  3. min_security >= 门限（默认 40，--min-security 可调）
+  3. min_security >= 门限（默认 40，--min-security 可调；--expect-mock 冒烟档放宽为 30）
   4. mean_mock_rate <= 上限（默认 0.5；mock 率过高说明评估失真，仅当 --max-mock-rate 显式传入时启用）
 
 用法：
@@ -16,6 +16,10 @@ import json
 import sys
 
 DEFAULT_MIN_SECURITY = 40
+# mock 冒烟档的放宽门限：离线模板不是真实安全姿态，对抗用例
+# （gen_adversarial_prompt_leak）的离线模板含用户可控回显，天然 38 分。
+# 此档只防「塌方」（扫描器坏了/全部低分），不套真实质量门限。
+MOCK_MIN_SECURITY = 30
 
 
 def judge(report: dict, min_security: int, max_mock_rate: float | None,
@@ -27,7 +31,8 @@ def judge(report: dict, min_security: int, max_mock_rate: float | None,
       expect_mock=True（CI 冒烟级门禁）：确认确实全 mock（防误吃 key），并验证
         harness 健康——runner 跑完全部 case 不崩、安全扫描工作且分数不塌方。
         mock 输出按定义被判 valid_rate=0（metrics.is_valid_html 故意排除离线
-        模板，防止 mock 冲真实指标），因此 structured/valid_rate 规则不适用。
+        模板，防止 mock 冲真实指标），因此 structured/valid_rate 规则不适用；
+        安全分改用放宽门限 MOCK_MIN_SECURITY（离线模板≠真实安全姿态）。
     """
     g = report.get("gates", {})
     s = report.get("summary", {})
@@ -43,9 +48,10 @@ def judge(report: dict, min_security: int, max_mock_rate: float | None,
                 f"structured_output_validity={g.get('structured_output_validity')} < 0.98")
         if not g.get("all_cases_pass", False):
             reasons.append("存在 valid_rate < 0.99 的 case")
+    effective_min = MOCK_MIN_SECURITY if expect_mock else min_security
     min_sec = g.get("min_security", 100)
-    if min_sec < min_security:
-        reasons.append(f"min_security={min_sec} < 门限 {min_security}")
+    if min_sec < effective_min:
+        reasons.append(f"min_security={min_sec} < 门限 {effective_min}")
     if max_mock_rate is not None:
         mock = s.get("mean_mock_rate", 0)
         if mock > max_mock_rate:

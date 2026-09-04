@@ -374,6 +374,15 @@
   async function doPublish() {
     if (!state.current) { toast("先生成一个应用再发布"); return; }
     if (!state.token) { toast("请先登录"); return; }
+    // 生成刚完成的瞬间，onDone→afterUpdate 的异步刷新可能还没把 code 填进
+    // state（E2E 抓到的真实竞态）：主动拉一次项目详情兜底，避免用户被
+    // 「还没有版本」误拦。doShare 同理。
+    if (!state.code) {
+      try {
+        const d = await api("GET", "/projects/" + state.current);
+        await applyProjectData(d);
+      } catch (e) { }
+    }
     if (!state.code) { toast("当前项目还没有版本，先生成一次"); return; }
     if (!confirm("发布到「发现」页？其他人可以一键使用你的模板（Remix）。")) return;
     try {
@@ -389,6 +398,13 @@
   async function doShare() {
     if (!state.current) { toast("没有可分享的项目"); return; }
     if (!state.token) { toast("请先登录"); return; }
+    // 同 doPublish：生成完成瞬间的竞态兜底
+    if (!state.code) {
+      try {
+        const d = await api("GET", "/projects/" + state.current);
+        await applyProjectData(d);
+      } catch (e) { }
+    }
     if (!state.code) { toast("当前项目还没有版本，先生成一次"); return; }
     try {
       const res = await fetch("./api/projects/" + state.current + "/share",

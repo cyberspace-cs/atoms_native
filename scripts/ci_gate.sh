@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 本地一键 CI 门禁（Gitee 环境的 GitHub Actions 等价物）。
-# 全链路：语法编译 → 单元测试 → 门禁自测（负例注入）→ mock 起服 → smoke → eval 门禁。
+# 全链路：语法编译 → 单元测试 → 门禁自测（负例注入）→ 防回退守护 →
+#         mock 起服 → smoke + E2E 旅程（真浏览器） → eval 门禁。
 # 任何一步失败立即退出非零（红）。
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -23,9 +24,10 @@ step() {
   fi
 }
 
-step "1/6 语法编译 (compileall)" "$PY" -m compileall -q server tests scripts
-step "2/6 单元测试" "$PY" tests/unit_tests.py
-step "3/6 门禁自测（负例注入）" "$PY" tests/gate_test.py
+step "1/8 语法编译 (compileall)" "$PY" -m compileall -q server tests scripts
+step "2/8 单元测试" "$PY" tests/unit_tests.py
+step "3/8 门禁自测（负例注入）" "$PY" tests/gate_test.py
+step "4/8 防回退守护（基线/特征/契约）" "$PY" tests/regression_guard.py
 
 # mock 模式起服（无 key 也可跑）。先彻底清理同端口残留实例（SIGTERM→SIGKILL），
 # 否则上次被 timeout 杀掉的脚本的子进程会占住端口导致 smoke 连接拒绝。
@@ -42,16 +44,25 @@ for i in $(seq 1 30); do
   sleep 1
 done
 if [ "$READY" != "1" ]; then
-  echo "❌ 4/6 mock 服务未就绪，uvicorn 日志尾部："
+  echo "❌ 5/8 mock 服务未就绪，uvicorn 日志尾部："
   tail -20 /tmp/ci_gate_uvicorn.log
   echo; echo "门禁结果：RED（服务启动失败）"
   exit 1
 fi
-echo "✅ 4/6 mock 服务就绪"; PASS=$((PASS+1))
+echo "✅ 5/8 mock 服务就绪"; PASS=$((PASS+1))
 
-step "5/6 smoke 全链路" env ATOMS_BASE="http://127.0.0.1:${PORT}" "$PY" tests/smoke.py
+step "6/8 smoke 全链路" env ATOMS_BASE="http://127.0.0.1:${PORT}" "$PY" tests/smoke.py
 
-step "6/6 评估门禁 (mock, run-twice-average)" bash -c \
+# E2E 用户旅程（真浏览器）：需要 playwright + chromium；服务器无 GUI，
+# 无头模式由脚本自身默认（chromium.launch() 即 headless）。缺 playwright
+# 时降级为 WARN（不阻塞），本地/有依赖环境全跑。
+if "$PY" -c "import playwright" 2>/dev/null; then
+  step "7/8 E2E 用户旅程（真浏览器）" env ATOMS_BASE="http://127.0.0.1:${PORT}" "$PY" tests/e2e_journeys.py
+else
+  echo "⚠️ 7/8 E2E 用户旅程：跳过（未安装 playwright）"
+fi
+
+step "8/8 评估门禁 (mock, run-twice-average)" bash -c \
   "(cd server && '$PY' -m evals.runner --runs 2 --model mock_ci_unavailable) && '$PY' scripts/eval_gate.py --expect-mock"
 # 说明：CI 门禁固定走 mock（无 key 也可跑、秒级、确定性）；
 # 全量真实评估成本高（47 case × N 次 × 数分钟），按需单独执行：

@@ -95,8 +95,12 @@ check("各项达标正常报告", False, good_report())
 
 # ---- CI 冒烟级门禁（--expect-mock）----
 check("[mock] 纯 mock + 安全分达标", False, mock_report(), ["--expect-mock"])
+check("[mock] 对抗用例离线模板 38 分仍绿", False,
+      mock_report(min_security=38), ["--expect-mock"])
 check("[mock] 安全分塌方仍要红", True,
       mock_report(min_security=10), ["--expect-mock"])
+check("[mock] 低于冒烟档门限(30)要红", True,
+      mock_report(min_security=29), ["--expect-mock"])
 check("[mock] mock 率不足 1（疑似误吃 key）要红", True,
       mock_report(summary={"mean_mock_rate": 0.5}), ["--expect-mock"])
 check("[mock] 报告损坏要红", True, None, ["--expect-mock"])
