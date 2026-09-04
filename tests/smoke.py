@@ -62,6 +62,29 @@ def stream_generate(token, pid, model=None):
     return sec, done
 
 
+def stream_refine(token, pid, message, model=None):
+    req = urllib.request.Request(
+        BASE + "/api/refine",
+        data=json.dumps({"project_id": pid, "message": message, "model": model}).encode(),
+        method="POST",
+    )
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Authorization", "Bearer " + token)
+    with urllib.request.urlopen(req, timeout=600) as r:
+        raw = r.read().decode()
+    done = None
+    for chunk in raw.split("\n\n"):
+        for line in chunk.split("\n"):
+            if line.startswith("data: "):
+                try:
+                    ev = json.loads(line[6:])
+                except Exception:
+                    continue
+                if ev.get("type") == "done":
+                    done = ev
+    return done
+
+
 def check(name, cond, detail=""):
     status = "PASS" if cond else "FAIL"
     print(f"[{status}] {name}" + (f" :: {detail}" if detail and not cond else ""))
@@ -98,8 +121,24 @@ def main():
     check("metrics totals structure", "c" in m.get("totals", {}))
 
     fb = call("POST", "/api/feedback",
-              {"project_id": pid, "version_id": pr["project"]["current_version"], "rating": 1}, token=token)
+              {"project_id": pid, "version_id": pr["project"]["current_version"], "rating": 1}, token)
     check("feedback accepted", fb.get("ok") is True)
+
+    # ── 对话式精修（应用重构修改）：SSE 流 → 新版本 + 对话记录 ──
+    rf_msg = "把主色调改成深蓝，并在页脚加一个清空按钮"
+    rf_done = stream_refine(token, pid, rf_msg)
+    check("refine done event + version_id", rf_done is not None and rf_done.get("version_id") is not None)
+    pr2 = call("GET", "/api/projects/" + str(pid), token=token)
+    check("refine 落新版本（current_version 前进）",
+          pr2["project"]["current_version"] not in (None, pr["project"]["current_version"]))
+    notes = [v.get("note") or "" for v in pr2["versions"]]
+    check("refine 版本 note 记录修改指令", any("精修" in n for n in notes),
+          str(notes[-2:]))
+    check("refine 对话留痕（messages 含用户指令）",
+          any(m.get("role") == "user" and rf_msg[:10] in (m.get("content") or "")
+              for m in pr2["messages"]))
+    check("refine 产出合法 HTML（current_code）",
+          "<html" in (pr2.get("current_code") or "").lower())
 
     # create a 2nd version then rollback to the previous one
     stream_generate(token, pid, model="deepseek")

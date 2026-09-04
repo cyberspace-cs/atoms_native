@@ -53,6 +53,11 @@ def normalize_model(model: str | None):
     if not model:
         return LLM_PROVIDER
     model = model.strip()
+    # 哨兵模型（mock_*，如 CI 用的 mock_ci_unavailable）永不路由到真实 provider。
+    # 2026-09-04 事故：未知模型原本静默回落 LLM_PROVIDER(deepseek)，本地有 key 时
+    # 「mock」评测真实调了 288 次 LLM（约 152 万 tokens）。
+    if model.startswith("mock"):
+        return model
     # OpenRouter model ids contain a "/", e.g. "deepseek/deepseek-v4-flash:free"
     # or "nousresearch/hermes-3-llama-3.1-405b:free" — route them to openrouter.
     if "/" in model:

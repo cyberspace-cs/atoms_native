@@ -76,6 +76,19 @@ class TestSecurityLLM(unittest.TestCase):
         cats = {f["owasp"] for f in res["findings"]}
         self.assertIn("LLM02", cats)
 
+    def test_mock_sentinel_never_routes_real_provider(self):
+        """2026-09-04 事故回归：未知模型原本静默回落 deepseek，本地有 key 时
+        「mock」评测真实烧了 288 次调用（约 152 万 tokens）。哨兵 mock_* 必须
+        永远走离线路径，无论环境里有没有 key。"""
+        from agent.llm import normalize_model, provider_available
+        for sentinel in ("mock_ci_unavailable", "mock", "mock_eval_local"):
+            self.assertEqual(normalize_model(sentinel), sentinel)
+            self.assertFalse(provider_available(sentinel))
+        # 真实 provider 的路由行为不受影响
+        self.assertEqual(normalize_model("deepseek"), "deepseek")
+        self.assertEqual(normalize_model("deepseek/deepseek-v4-flash:free"), "openrouter")
+        self.assertEqual(normalize_model(""), normalize_model(None))  # 空值回落默认
+
     def test_scan_html_excessive_agency_llm06(self):
         code = "window.location = 'https://external.example/redirect';"
         res = security.scan_html(code)
