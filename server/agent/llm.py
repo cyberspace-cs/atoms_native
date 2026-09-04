@@ -70,12 +70,21 @@ def normalize_model(model: str | None):
     return LLM_PROVIDER
 
 
+def offline_mode() -> bool:
+    """Hard network kill switch, checked at the final HTTP boundary too."""
+    return os.environ.get("ATOMS_OFFLINE", "").lower() in ("1", "true", "yes")
+
+
 def provider_available(model: str | None = None) -> bool:
+    if offline_mode():
+        return False
     cfg = PROVIDER_CONFIG.get(normalize_model(model))
     return bool(cfg and cfg.get("key") and cfg.get("base_url"))
 
 
 def list_models() -> list[str]:
+    if offline_mode():
+        return []
     return [k for k, v in PROVIDER_CONFIG.items() if v.get("key") and v.get("base_url")]
 
 
@@ -92,6 +101,9 @@ def list_choices() -> list[dict]:
          but subject to upstream free-tier throttling -> 429).
       3. Direct DeepSeek key (cheapest, always-on fallback, default selection).
     """
+    if offline_mode():
+        return [{"id": "mock_offline", "label": "离线验证（零模型调用）", "free": True,
+                 "note": "强制离线：不会连接模型供应商"}]
     out = []
     if OPENROUTER_API_KEY:
         # (1) the four named models — priority
@@ -193,6 +205,8 @@ def chat(model: str | None, messages: list[dict], temperature: float = 0.7, max_
     it is used directly for the API call; otherwise the provider's default
     `cfg["model"]` is used.
     """
+    if offline_mode():
+        return None, "offline_mode"
     cfg = PROVIDER_CONFIG.get(normalize_model(model))
     if not cfg or not cfg.get("key") or not cfg.get("base_url"):
         return None, "no_provider"

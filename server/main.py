@@ -22,6 +22,7 @@ from auth import create_user, authenticate, create_session, require_user, requir
 from models import UserCreate, ProjectCreate, GenerateReq, RefineReq, RaceReq, SelectVersionReq
 from agent.llm import list_models, list_choices, provider_available, LLM_PROVIDER
 from agent import pipeline
+from generation_service import commit_generation, GenerationConflict
 from agent import race as race_mod
 
 init_db()
@@ -146,7 +147,7 @@ def get_project(pid: int, user=Depends(require_user)):
         raise HTTPException(status_code=404, detail="项目不存在")
     conn = get_conn()
     versions = conn.execute(
-        "SELECT id,version_no,model_used,race_winner,note,security_score,created_at FROM versions WHERE project_id=? ORDER BY version_no",
+        "SELECT id,version_no,model_used,race_winner,note,security_score,created_at,status,mock,parent_version,call_count FROM versions WHERE project_id=? ORDER BY version_no",
         (pid,),
     ).fetchall()
     messages = conn.execute(
@@ -241,6 +242,65 @@ def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
+def _generation_events(p, user, model, ip, sid, message=None, base_code=None):
+    """One terminal event; only persisted code is released to the browser."""
+    action = 'refine' if message is not None else 'generate'
+    gen = None
+    try:
+        log_audit(user['id'], action + '_start', f"project:{p['id']}",
+                  message[:40] if message is not None else model or LLM_PROVIDER,
+                  source_ip=ip, session_id=sid)
+        gen = pipeline.run_pipeline(p['idea'], model=model, refine_code=base_code,
+                                    refine_msg=message, base_spec=p['spec_json'],
+                                    base_arch=p['arch_json'], project_id=p['id'])
+        while True:
+            try:
+                ev = next(gen)
+            except StopIteration as end:
+                final = end.value or {}
+                break
+            if ev.get('type') != 'app_code':
+                yield _sse(ev)
+            if not rl.renew(user['id']):
+                raise GenerationConflict('任务锁已失效，请刷新后重试；未保存新版本。')
+        status = final.get('status', 'failed')
+        if status == 'failed':
+            log_audit(user['id'], action + '_failed', f"project:{p['id']}",
+                      final.get('error'), source_ip=ip, session_id=sid, outcome='failure')
+            yield _sse({'type': 'error', 'status': 'failed', 'message': final.get('error') or '生成失败，未保存新版本。',
+                        'project_id': p['id'], 'call_count': final.get('call_count', 0)})
+            return
+        vid = commit_generation(p, final, message)
+        if vid is None:
+            yield _sse({'type': 'done', 'status': 'unchanged', 'project_id': p['id'],
+                        'version_id': p['current_version'], 'mock': final.get('mock'),
+                        'call_count': final.get('call_count', 0),
+                        'message': final.get('error') or '代码没有变化，已保留上一版。'})
+            return
+        # A logging failure AFTER commit must not turn a saved version into a
+        # fake failure that invites a second billable request.
+        try:
+            log_audit(user['id'], action + '_done', f"project:{p['id']}",
+                      f"version:{vid} status={status} mock={final['mock']}", source_ip=ip, session_id=sid)
+        except Exception:
+            yield _sse({'type': 'system', 'message': '版本已保存，但审计记录失败，请联系管理员检查。'})
+        yield _sse({'type': 'app_code', 'code': final['code']})
+        yield _sse({'type': 'done', 'status': status, 'project_id': p['id'], 'version_id': vid,
+                    'mock': final['mock'], 'call_count': final['call_count'],
+                    'security': final.get('security', {}).get('score')})
+    except GenerationConflict as exc:
+        yield _sse({'type': 'error', 'status': 'failed', 'message': str(exc), 'project_id': p['id']})
+    except Exception:
+        yield _sse({'type': 'error', 'status': 'failed', 'message': '任务执行失败，未交付新版本，请刷新后重试。',
+                    'project_id': p['id']})
+    finally:
+        try:
+            if gen is not None:
+                gen.close()
+        finally:
+            rl.release(user['id'])
+
+
 @app.post("/api/generate")
 def generate(req: GenerateReq, user=Depends(require_user),
              request: Request = None, authorization: str | None = Header(default=None)):
@@ -254,42 +314,8 @@ def generate(req: GenerateReq, user=Depends(require_user),
         rl.release(user["id"])
         raise HTTPException(status_code=429, detail="生成过于频繁，请稍后再试（每小时上限 %d 次）" % RATE_LIMIT)
     ip, sid = _audit_ctx(request, authorization)
-    log_audit(user["id"], "generate_start", f"project:{p['id']}", req.model or LLM_PROVIDER,
-              source_ip=ip, session_id=sid)
-
-    def stream():
-        final = {}
-        try:
-            gen = pipeline.run_pipeline(p["idea"], model=req.model, base_spec=p["spec_json"],
-                                       base_arch=p["arch_json"], project_id=p["id"])
-            while True:
-                try:
-                    ev = next(gen)
-                except StopIteration as e:
-                    final = e.value or {}
-                    break
-                yield _sse(ev)
-                rl.renew(user["id"])  # 锁续期：进程被杀时 TTL 自愈，正常任务不过期
-            sec = final.get("security", {}).get("score")
-            # persist
-            vno = _next_version(p["id"])
-            vid = execute(get_conn(),
-                "INSERT INTO versions(project_id,version_no,code,model_used,note,security_score) VALUES(?,?,?,?,?,?)",
-                (p["id"], vno, final.get("code", ""), final.get("model"),
-                 ("离线模板" if final.get("mock") else "初版生成"), sec))
-            conn = get_conn()
-            conn.execute("UPDATE projects SET spec_json=?,arch_json=?,status='ready',current_version=?,updated_at=datetime('now') WHERE id=?",
-                         (final.get("spec", ""), final.get("arch", ""), vid, p["id"]))
-            conn.commit()
-            conn.close()
-            log_audit(user["id"], "generate_done", f"project:{p['id']}",
-                      f"version:{vid} mock={final.get('mock')} sec={sec}", source_ip=ip, session_id=sid)
-            yield _sse({"type": "done", "project_id": p["id"], "version_id": vid,
-                        "mock": final.get("mock"), "security": sec})
-        finally:
-            rl.release(user["id"])
-
-    return StreamingResponse(stream(), media_type="text/event-stream", headers=SSE_HEADERS)
+    return StreamingResponse(_generation_events(p, user, req.model, ip, sid),
+                             media_type="text/event-stream", headers=SSE_HEADERS)
 
 
 @app.post("/api/refine")
@@ -300,6 +326,8 @@ def refine(req: RefineReq, user=Depends(require_user),
         raise HTTPException(status_code=404, detail="项目不存在")
     if not p["current_version"]:
         raise HTTPException(status_code=400, detail="请先生成初始版本")
+    if not req.message.strip():
+        raise HTTPException(status_code=400, detail="修改请求不能为空")
     conn = get_conn()
     v = conn.execute("SELECT code FROM versions WHERE id=?", (p["current_version"],)).fetchone()
     conn.close()
@@ -311,40 +339,8 @@ def refine(req: RefineReq, user=Depends(require_user),
         rl.release(user["id"])
         raise HTTPException(status_code=429, detail="操作过于频繁，请稍后再试")
     ip, sid = _audit_ctx(request, authorization)
-    log_audit(user["id"], "refine_start", f"project:{p['id']}", req.message[:40],
-              source_ip=ip, session_id=sid)
-
-    def stream():
-        final = {}
-        try:
-            gen = pipeline.run_pipeline(p["idea"], model=req.model, refine_code=base_code, refine_msg=req.message,
-                                       base_spec=p["spec_json"], base_arch=p["arch_json"], project_id=p["id"])
-            while True:
-                try:
-                    ev = next(gen)
-                except StopIteration as e:
-                    final = e.value or {}
-                    break
-                yield _sse(ev)
-                rl.renew(user["id"])  # 锁续期
-            _save_message(p["id"], "user", req.message)
-            sec = final.get("security", {}).get("score")
-            vno = _next_version(p["id"])
-            vid = execute(get_conn(),
-                "INSERT INTO versions(project_id,version_no,code,model_used,note,security_score) VALUES(?,?,?,?,?,?)",
-                (p["id"], vno, final.get("code", base_code), final.get("model"), f"精修：{req.message[:30]}", sec))
-            conn = get_conn()
-            conn.execute("UPDATE projects SET current_version=?,updated_at=datetime('now') WHERE id=?", (vid, p["id"]))
-            conn.commit()
-            conn.close()
-            log_audit(user["id"], "refine_done", f"project:{p['id']}",
-                      f"version:{vid} mock={final.get('mock')} sec={sec}", source_ip=ip, session_id=sid)
-            yield _sse({"type": "done", "project_id": p["id"], "version_id": vid,
-                        "mock": final.get("mock"), "security": sec})
-        finally:
-            rl.release(user["id"])
-
-    return StreamingResponse(stream(), media_type="text/event-stream", headers=SSE_HEADERS)
+    return StreamingResponse(_generation_events(p, user, req.model, ip, sid, req.message, base_code),
+                             media_type="text/event-stream", headers=SSE_HEADERS)
 
 
 @app.post("/api/race")

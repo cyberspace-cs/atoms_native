@@ -59,7 +59,10 @@ def run_refine_fix(case: dict, model: str, is_fix: bool):
             final = e.value or {}
             break
     dt = time.time() - t0
-    return final.get("code", ""), bool(final.get("mock")), dt
+    # Retaining the previous valid HTML is recovery, not a successful edit.
+    # Mock runs retain fixtures only for the separate offline harness gate.
+    delivered = final.get("status") == "success" or final.get("mock")
+    return final.get("code", "") if delivered else "", bool(final.get("mock")), dt
 
 
 def run_explain(case: dict, model: str):
@@ -137,6 +140,7 @@ def main():
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--model", default=LLM_PROVIDER)
     ap.add_argument("--only", default=None, help="只跑某个 case id")
+    ap.add_argument("--report", default=os.path.join(HERE, "_eval_report.json"), help="报告路径（CI 使用临时目录）")
     args = ap.parse_args()
 
     if not provider_available(args.model):
@@ -216,7 +220,7 @@ def main():
         "audit": audit,
         "cases": results,
     }
-    with open(os.path.join(HERE, "_eval_report.json"), "w", encoding="utf-8") as f:
+    with open(args.report, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     print("\n=== 汇总 ===")
     for k, v in overall.items():
@@ -225,7 +229,7 @@ def main():
     print(f"  结构化输出有效性: {gate['structured_output_validity']} "
           f"(gate {'PASS' if gate['structured_output_gate_pass'] else 'FAIL'} >=0.98)")
     print(f"  全部 case 通过: {gate['all_cases_pass']} | 最低安全分: {gate['min_security']}")
-    print(f"\n报告已写入 server/evals/_eval_report.json")
+    print(f"\n报告已写入 {args.report}")
 
 
 if __name__ == "__main__":

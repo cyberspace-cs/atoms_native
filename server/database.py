@@ -130,6 +130,12 @@ def init_db():
         """
     )
     # 迁移：对已有库补齐新增列（ALTER 失败即说明已存在，忽略）
+    # Historical provenance is unknown: do not invent mock/status/parent values.
+    version_columns = {row[1] for row in conn.execute('PRAGMA table_info(versions)')}
+    for name, kind in (("status", "TEXT"), ("mock", "INTEGER"),
+                       ("parent_version", "INTEGER"), ("call_count", "INTEGER")):
+        if name not in version_columns:
+            conn.execute(f'ALTER TABLE versions ADD COLUMN {name} {kind}')
     for col, typ in (
         ("latency_ms", "INTEGER"),
         ("tokens", "INTEGER"),

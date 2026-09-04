@@ -2,6 +2,8 @@
 
 > SDD 阶段产物 #1。本文档定义"我们要造什么"，技术实现见 `docs/design.md`。
 
+> 2026-09-04 当前验收补充：精修 failed/unchanged 不新增版本、不切指针；真实调用失败不得以 mock 成功掩盖；无效评审不放行，修复后复审；门禁强制零模型调用。完整契约见 [核心闭环 v1.6](core-loop-v1.6.md)。下方用户 Race 流程为初版历史设计，现仅管理员可用。
+
 ## 1. 产品定位
 
 **Atoms_Native** 是一个「AI Agent 驱动的应用生成平台」Demo：用户用自然语言描述一个想法，平台调度一支多智能体团队（PM / 架构师 / 工程师 / 评审）把想法变成**一个可运行的单文件 Web 应用**，并实时可视化地展示生成过程与最终成品。对标 [Atoms](https://atoms.dev/) 的核心体验——"Tell Atoms your idea and watch it build a usable app in minutes"。

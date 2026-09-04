@@ -1,5 +1,9 @@
 # ⚛ Atoms Native — AI Agent 驱动的应用生成平台
 
+> **2026-09-04 · v1.6 核心闭环维护说明**：精修失败/无变化不再新增版本；有限格式重试保留上下文；评审无效不放行，修复后复审。Race 仅管理员可用，旧章节的用户 Race 描述属于历史方案。当前实现与验收见 [核心闭环 v1.6](docs/core-loop-v1.6.md)。
+>
+> **零费用完整门禁（Windows / Linux / CI 共用）**：安装 `requirements-dev.txt`、`python -m playwright install chromium`，并确保 Node.js 22+ 可用，然后运行 `python scripts/ci_gate.py`。强制离线、临时数据库、强制浏览器检查；不连接真实模型、不覆盖本地评估报告。离线精修仅明确保留上一版，不宣称做了修改。
+
 > 一个可运行的网页应用 Demo：用自然语言描述想法 → 多智能体团队（PM / 架构师 / 工程师 / 评审）协作 → 生成**一个可运行的单文件 Web 应用** → 实时预览 → 对话式迭代。对标 [Atoms](https://atoms.dev/) 的核心体验。
 
 这是为 **AI Native 全栈工程师岗位笔试** 提交的 Atoms Demo。

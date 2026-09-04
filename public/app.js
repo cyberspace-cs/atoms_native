@@ -27,11 +27,13 @@
     const s = $("streamStatus");
     if (s) { s.textContent = b ? "工作中…" : "空闲"; s.classList.toggle("busy", b); }
   }
-  function resetStream() {
+  function resetStream(preserveCurrent) {
+    const previousScore = state.securityScore;
     $("stream").innerHTML = ""; agentCards = {}; specCard = null; resetPhases();
     const b = $("secBadge"); if (b) b.classList.add("hidden");
     const pop = $("secPopover"); if (pop) pop.classList.add("hidden");
     state.versionId = null; state.securityScore = null; state.securityFindings = null; state.securitySummary = null;
+    if (preserveCurrent && previousScore != null) updateSecurityBadge(previousScore);
     resetFeedback();
   }
   function updateSecurityBadge(score, findings, summary) {
@@ -107,16 +109,25 @@
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf("\n\n")) >= 0) {
-        const chunk = buf.slice(0, idx); buf = buf.slice(idx + 2);
-        const line = chunk.split("\n").find((l) => l.startsWith("data: "));
-        if (line) { try { onEvent(JSON.parse(line.slice(6))); } catch (e) { } }
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("生成流意外中断，未收到终态；请刷新项目确认结果后再重试。");
+        buf += dec.decode(value, { stream: true });
+        let separator;
+        while ((separator = /\r?\n\r?\n/.exec(buf))) {
+          const chunk = buf.slice(0, separator.index);
+          buf = buf.slice(separator.index + separator[0].length);
+          const data = chunk.split(/\r?\n/).filter(l => l.startsWith("data:"))
+            .map(l => l.slice(5).replace(/^ /, "")).join("\n");
+          if (!data) continue; // SSE heartbeat/comment
+          const event = JSON.parse(data);
+          await onEvent(event);
+          if (event.type === "done" || event.type === "error") return event;
+        }
       }
+    } finally {
+      try { await reader.cancel(); } finally { reader.releaseLock(); }
     }
   }
 
@@ -124,7 +135,7 @@
   let agentCards = {};
   let specCard = null;
   function pushAgent(ev) {
-    const key = ev.label || ev.agent;
+    const key = ev.agent;
     const stream = $("stream");
     let card = agentCards[key];
     if (!card) {
@@ -137,7 +148,7 @@
     return card;
   }
   function appendAgent(ev) {
-    const key = ev.label || ev.agent;
+    const key = ev.agent;
     const card = agentCards[key]; if (!card) return;
     card.classList.remove("running");
     const body = card.querySelector(".body");
@@ -196,7 +207,7 @@
   }
 
   // ---------- event router ----------
-  function onEvent(ev) {
+  async function onEvent(ev) {
     switch (ev.type) {
       case "system": addNote(ev.message, "⚠️"); break;
       case "spec":
@@ -230,19 +241,22 @@
         break;
       case "done":
         markPhase("done"); highlightTeam(null);
+        markAllStopped();
+        if (ev.status === "unchanged") addNote(esc(ev.message || "没有代码变更，已保留上一版。"), "ℹ️");
+        if (ev.status === "degraded") addNote("本次交付为离线模板，未通过真实模型评审。", "⚠️");
         if (typeof ev.security === "number") { state.securityScore = ev.security; updateSecurityBadge(ev.security); }
         if (ev.version_id) state.versionId = ev.version_id;
-        onDone(ev);
+        await onDone(ev);
         break;
       case "error":
-        addNote("出错：" + ev.message, "❌");
+        addNote("出错：" + esc(ev.message), "❌");
         markAllStopped();
+        if (ev.project_id || state.current) await afterUpdate(ev.project_id || state.current);
         setBusy(false);
         break;
     }
   }
   async function onDone(ev) {
-    setBusy(false);
     if (ev.project_id) { state.current = ev.project_id; await afterUpdate(ev.project_id); }
   }
   async function applyProjectData(d) {
@@ -342,11 +356,11 @@
     const msg = $("refineInput").value.trim();
     if (!msg) { toast("输入精修要求"); return; }
     if (!state.current) { toast("请先生成或打开一个项目"); return; }
-    setBusy(true); resetStream();
+    setBusy(true); resetStream(true);
     try {
-      await streamPost("./api/refine", { project_id: state.current, message: msg, model: $("modelSel").value || null }, onEvent);
-      $("refineInput").value = "";
-    } catch (e) { toast("精修失败：" + e.message); markAllStopped(); }
+      const terminal = await streamPost("./api/refine", { project_id: state.current, message: msg, model: $("modelSel").value || null }, onEvent);
+      if (terminal.type === "done" && terminal.status === "success") $("refineInput").value = "";
+    } catch (e) { toast("精修失败：" + e.message); markAllStopped(); await afterUpdate(state.current); }
     finally { setBusy(false); }
   }
   async function doExport() {

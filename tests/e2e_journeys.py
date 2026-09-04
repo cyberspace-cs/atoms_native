@@ -40,6 +40,10 @@ def check(name, fn):
 
 
 def run(page):
+    # Never let a browser's model picker silently spend a configured key.
+    config = page.request.get(f"{BASE}/api/models").json()
+    if not any(c.get('id') == 'mock_offline' for c in config.get('choices', [])):
+        raise AssertionError('E2E requires a disposable server started with ATOMS_OFFLINE=1')
     # ── 1. 发现页：搜索 / 排序 / 空态 ─────────────────────────
     print("[1] 发现页")
     page.goto(f"{BASE}/discover.html")
@@ -99,6 +103,29 @@ def run(page):
     check("生成流已结束（genBtn 恢复可用，version 已落库）", lambda: (_ for _ in ()).throw(
         AssertionError("genBtn 120s 内未恢复可用")) if page.evaluate(
             "document.getElementById('genBtn').disabled") else None)
+
+    # 离线精修：真实按钮/真实 SSE，必须明确无变化。
+    print('[3b] 精修无变化与失败恢复')
+    original_preview = page.locator('#preview').get_attribute('srcdoc')
+    page.fill('#refineInput', '把标题改成绿色')
+    page.click('#refineBtn')
+    check('离线精修明确保留上一版', lambda: expect(page.locator('#stream')).to_contain_text('离线模式无法执行精修'))
+    check('精修结束按钮恢复', lambda: expect(page.locator('#refineBtn')).to_be_enabled())
+    check('离线精修预览保持原样', lambda: expect(page.locator('#preview')).to_have_attribute('srcdoc', original_preview))
+
+    # Inject transport failures at the browser boundary, never a paid model.
+    def failed_stream(route):
+        route.fulfill(status=200, content_type='text/event-stream',
+                      body='data: {"type":"error","status":"failed","message":"测试精修失败，已保留上一版"}\n\n')
+    page.route('**/api/refine', failed_stream)
+    page.fill('#refineInput', '测试失败')
+    page.click('#refineBtn')
+    check('精修失败可见而非成功', lambda: expect(page.locator('#stream')).to_contain_text('测试精修失败'))
+    check('失败后按钮恢复', lambda: expect(page.locator('#refineBtn')).to_be_enabled())
+    check('失败后预览不变', lambda: expect(page.locator('#preview')).to_have_attribute('srcdoc', original_preview))
+    check('失败后仍显示上一版安全分', lambda: expect(page.locator('#secBadge')).to_be_visible())
+    check('失败后保留修改指令便于重试', lambda: expect(page.locator('#refineInput')).to_have_value('测试失败'))
+    page.unroute('**/api/refine', failed_stream)
 
     # ── 4. 发布到发现页 ──────────────────────────────────────
     print("[4] 发布")
@@ -198,7 +225,7 @@ def main():
         try:
             run(page)
             if errors:
-                print(f"\n⚠️ 页面 JS 错误：{errors[:3]}")
+                raise AssertionError(f"页面 JS 错误：{errors[:3]}")
         finally:
             browser.close()
     print(f"\n{'='*50}")

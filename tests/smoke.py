@@ -7,10 +7,8 @@ Exercises the productionization surface end-to-end against a running server:
   - version persistence -> /api/metrics reflects security score
   - /api/feedback + /api/projects/{pid}/rollback
 
-Works in BOTH real mode and mock mode (no API key). Set ATOMS_BASE to point at
-the server (default http://127.0.0.1:8099). If DEEPSEEK_API_KEY is present in
-the environment when the server starts, agent_runs observability is also
-exercised by the local e2e test; this CI job focuses on endpoint wiring.
+Always requests the mock sentinel, even against a configured server.
+Set ATOMS_BASE to a disposable local server; this script creates test data.
 """
 import json
 import os
@@ -37,7 +35,7 @@ def call(method, path, body=None, token=None):
         return json.loads(r.read().decode())
 
 
-def stream_generate(token, pid, model=None):
+def stream_generate(token, pid, model="mock_ci_unavailable"):
     req = urllib.request.Request(
         BASE + "/api/generate",
         data=json.dumps({"project_id": pid, "model": model}).encode(),
@@ -62,7 +60,7 @@ def stream_generate(token, pid, model=None):
     return sec, done
 
 
-def stream_refine(token, pid, message, model=None):
+def stream_refine(token, pid, message, model="mock_ci_unavailable"):
     req = urllib.request.Request(
         BASE + "/api/refine",
         data=json.dumps({"project_id": pid, "message": message, "model": model}).encode(),
@@ -103,7 +101,8 @@ def main():
     pid = (p.get("project") or {}).get("id")
     check("create project", pid is not None)
 
-    sec, done = stream_generate(token, pid, model="deepseek")
+    sec, done = stream_generate(token, pid)
+    check("generation is explicitly degraded/mock", done is not None and done.get("mock") is True and done.get("status") == "degraded")
     check("security SSE event present", sec is not None and isinstance(sec.get("score"), int),
           str(sec.get("score") if sec else None))
     check("done.security present", done is not None and isinstance(done.get("security"), int),
@@ -124,24 +123,18 @@ def main():
               {"project_id": pid, "version_id": pr["project"]["current_version"], "rating": 1}, token)
     check("feedback accepted", fb.get("ok") is True)
 
-    # ── 对话式精修（应用重构修改）：SSE 流 → 新版本 + 对话记录 ──
+    # 离线精修无法改代码：必须明确 unchanged，不得伪造新版本。
     rf_msg = "把主色调改成深蓝，并在页脚加一个清空按钮"
     rf_done = stream_refine(token, pid, rf_msg)
-    check("refine done event + version_id", rf_done is not None and rf_done.get("version_id") is not None)
+    check("offline refine is unchanged", rf_done is not None and rf_done.get("status") == "unchanged")
     pr2 = call("GET", "/api/projects/" + str(pid), token=token)
-    check("refine 落新版本（current_version 前进）",
-          pr2["project"]["current_version"] not in (None, pr["project"]["current_version"]))
-    notes = [v.get("note") or "" for v in pr2["versions"]]
-    check("refine 版本 note 记录修改指令", any("精修" in n for n in notes),
-          str(notes[-2:]))
-    check("refine 对话留痕（messages 含用户指令）",
-          any(m.get("role") == "user" and rf_msg[:10] in (m.get("content") or "")
-              for m in pr2["messages"]))
-    check("refine 产出合法 HTML（current_code）",
-          "<html" in (pr2.get("current_code") or "").lower())
+    check("unchanged refine preserves pointer", pr2["project"]["current_version"] == pr["project"]["current_version"])
+    check("unchanged refine creates no version", len(pr2["versions"]) == len(pr["versions"]))
+    check("unchanged refine preserves exact code", pr2["current_code"] == pr["current_code"])
+    check("unchanged refine explains limitation", "离线" in (rf_done or {}).get("message", ""))
 
     # create a 2nd version then rollback to the previous one
-    stream_generate(token, pid, model="deepseek")
+    stream_generate(token, pid)
     cur2 = call("GET", "/api/projects/" + str(pid), token=token)["project"]["current_version"]
     rb = call("POST", "/api/projects/" + str(pid) + "/rollback", {}, token=token)
     check("rollback ok", rb.get("ok") is True)

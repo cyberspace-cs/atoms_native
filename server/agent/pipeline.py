@@ -5,6 +5,7 @@ final summary dict (captured via StopIteration.value by the caller).
 """
 import html
 import json
+import os
 import re
 import time
 
@@ -239,35 +240,43 @@ def _mock_app(idea: str) -> str:
 </html>"""
 
 
+class PipelineFailure(Exception):
+    """A safe, user-facing terminal failure (never a provider exception body)."""
+
+
 def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = None,
                  refine_msg: str | None = None, base_spec: str | None = None,
                  base_arch: str | None = None, project_id: int | None = None):
-    """Generator yielding event dicts; returns final summary dict."""
+    """Bounded generation; only approved/degraded output is deliverable.
+
+    status is independent of provenance (mock). Failed/unchanged refinements keep
+    their input code but MUST NOT be persisted as a new version by callers.
+    """
     model = model or LLM_PROVIDER
     mock = not provider_available(model)
     t_start = time.time()
     trace_id = obs.corr_id()
-    if mock:
-        yield {"type": "system", "message": f"⚠️ 未检测到可用 LLM（{model}）或缺少 API Key，已切换离线模板模式——全流程仍可跑通。"}
-        # 摩擦信号：整轮没走真实模型，这条会话对质量评估没有参考价值
-        friction.record(project_id, "mock_mode",
-                        f"未检测到可用 LLM（{model}）或缺少 API Key", session_id=trace_id)
-    # LLMOps：关联 ID + prompt hash（便于日志/审计关联且不泄露 prompt 内容）
+    refining = refine_code is not None
+    spec, arch = base_spec or "", base_arch or ""
+    calls = 0
+    try:
+        budget = max(1, min(12, int(os.environ.get("ATOMS_MAX_LLM_CALLS", "8"))))
+    except ValueError:
+        budget = 8
     yield {"type": "trace", "trace_id": trace_id,
            "prompt_hash": obs.prompt_hash(idea), "model": model}
 
-    # Track real LLM call failures so we never silently pretend a blocked call
-    # succeeded (e.g. OpenRouter 404 "No allowed providers"). `fell_back` covers
-    # the second failure mode: the call SUCCEEDED but returned incomplete/invalid
-    # HTML (e.g. truncated at max_tokens, no </html>) — we must not swap in the
-    # offline template and still claim a real generation.
-    erred = False
-    last_err = ""
-    fell_back = False
+    def result(status, code, error=None, verdict="unreviewed"):
+        return {"spec": spec, "arch": arch, "code": code, "model": model,
+                "mock": mock, "status": status, "error": error,
+                "call_count": calls, "verdict": verdict,
+                "security": security.scan_html(code) if code else {}}
 
     def _agent(agent: str, messages: list, max_tokens: int = 1500):
-        """chat() + 计时 + 落库 agent_runs（可观测性：调用追踪 / 成本 / 延迟）。"""
-        nonlocal erred, last_err
+        nonlocal calls
+        if calls >= budget:
+            raise PipelineFailure(f"本轮已达到 {budget} 次模型调用上限，已停止，不再重试。")
+        calls += 1
         attrs = {
             "gen_ai.agent.name": agent,
             "gen_ai.request.model": model,
@@ -278,178 +287,124 @@ def run_pipeline(idea: str, model: str | None = None, refine_code: str | None = 
             t, e = chat(model, messages, max_tokens=max_tokens)
             dt_ms = int((time.time() - t0) * 1000)
             toks = _tok(json.dumps(messages, ensure_ascii=False)) + _tok(t or "")
-            if e:
-                erred = True
-                last_err = e
-                # 摩擦信号：真实 LLM 调用失败，是「你和 AI 搏斗过」最直接的证据
-                friction.record(project_id, "llm_error",
-                                f"{agent}: {str(e)[:200]}", session_id=trace_id)
+            # Provider errors may contain URLs/credentials: only safe summaries persist.
+            safe_error = "模型调用失败，已停止本轮任务，请检查服务配置或稍后重试。" if e else None
             log_agent_run(project_id, None, agent, model,
                           json.dumps(messages, ensure_ascii=False)[:2000], (t or "")[:4000],
-                          dt_ms, toks, bool(e), e, None)
-            # LLMOps 指标：每次 agent 调用的延迟/成本/分位聚合
-            obs.record_run(agent, model, dt_ms, toks, bool(e), None)
-            return t
+                          dt_ms, toks, False, safe_error, None)
+            obs.record_run(agent, model, dt_ms, toks, False, None)
+            if e:
+                friction.record(project_id, "llm_error", f"{agent}: {safe_error}", session_id=trace_id)
+                raise PipelineFailure(safe_error)
+            return t or ""
 
     def _produce_html(system_prompt: str, user_prompt: str, label: str, max_tokens: int = 16000):
-        """调用工程师类 agent，强制输出合法 HTML（格式防线：一次修正重试）。
-
-        返回提取后的完整 HTML 字符串；若两次都拿不到合法 HTML，返回 None
-        （由调用方决定降级策略：初版/精修降级到上一版，修复失败则保留修复前版本）。
-        """
-        c = _agent(label, [{"role": "system", "content": system_prompt},
-                           {"role": "user", "content": user_prompt}], max_tokens=max_tokens)
-        cand = _extract_html(c) if c else ""
-        if _valid_html(cand):
-            return cand
-        # 格式修正重试：明确要求只输出 HTML
-        # 摩擦信号：首次没吐出合法 HTML，说明提示词/长度约束在这一类任务上不稳定
-        friction.record(project_id, "format_retry",
-                        f"{label}: 首次输出非合法 HTML，触发格式修正重试",
-                        session_id=trace_id)
-        c2 = _agent(label, [{"role": "system", "content": system_prompt},
-                            {"role": "user", "content": HTML_ONLY_RETRY}], max_tokens=max_tokens)
-        cand2 = _extract_html(c2) if c2 else ""
-        if _valid_html(cand2):
-            return cand2
+        for attempt in range(2):
+            # Retain requirements, current code and requested edits on retry.
+            prompt = user_prompt + ("\n\n" + HTML_ONLY_RETRY if attempt else "")
+            c = _agent(label, [{"role": "system", "content": system_prompt},
+                               {"role": "user", "content": prompt}], max_tokens=max_tokens)
+            candidate = _extract_html(c)
+            if _valid_html(candidate):
+                return candidate
+            if attempt == 0:
+                friction.record(project_id, "format_retry", f"{label}: 格式修正重试", session_id=trace_id)
         return None
 
-    def _make_plan(idea: str, spec: str) -> str | None:
-        """复杂规格先做「结构化实现计划」（plan-then-build 第一步）。"""
-        p = _agent("Planner", [{"role": "system", "content": PLAN_SYSTEM},
-                               {"role": "user", "content": f"产品想法：{idea}\n\n初步规格：\n{spec}"}],
-                   max_tokens=1200)
-        return p if p else None
+    def review(code):
+        r = _agent("Reviewer", [{"role": "system", "content": REV_SYSTEM},
+                               {"role": "user", "content": f"SPEC:\n{spec}\n\n本轮请求（优先验收）：\n{refine_msg or idea}\n\nCODE:\n{code}"}], max_tokens=1500)
+        data = _extract_json(r)
+        if (not isinstance(data, dict) or data.get("verdict") not in ("approve", "fix")
+                or type(data.get("score")) not in (int, float) or not 0 <= data["score"] <= 100
+                or not isinstance(data.get("issues"), list)
+                or not all(isinstance(issue, str) for issue in data["issues"])
+                or (data["verdict"] == "fix" and
+                    (not isinstance(data.get("patch_instructions"), str) or not data["patch_instructions"].strip()))):
+            raise PipelineFailure("评审未返回有效结论，未交付新版本。")
+        return r, data
 
-    # 1) PM
-    yield {"type": "agent_start", "agent": "PM", "label": "产品经理 · Emma", "icon": "📋"}
-    if refine_code and refine_msg and base_spec:
-        spec = base_spec
-    elif mock:
-        spec = _mock_spec(idea)
-    else:
-        spec = _agent("PM", [{"role": "system", "content": PM_SYSTEM}, {"role": "user", "content": idea}])
-        if not spec:
-            spec = _mock_spec(idea)
-            fell_back = True
-    yield {"type": "agent_output", "agent": "PM", "output": spec}
-
-    # 2) Architect
-    yield {"type": "agent_start", "agent": "Architect", "label": "架构师 · Bob", "icon": "🏗️"}
-    if refine_code and refine_msg and base_arch:
-        arch = base_arch
-    elif mock:
-        arch = _mock_arch(idea)
-    else:
-        arch = _agent("Architect", [{"role": "system", "content": ARCH_SYSTEM}, {"role": "user", "content": spec}])
-        if not arch:
-            arch = _mock_arch(idea)
-            fell_back = True
-    yield {"type": "agent_output", "agent": "Architect", "output": arch}
-
-    # 3) Engineer
-    yield {"type": "agent_start", "agent": "Engineer", "label": "工程师 · Alex", "icon": "⚙️"}
-    if refine_code and refine_msg:
+    try:
+        if refining and not (refine_msg or "").strip():
+            raise PipelineFailure("修改请求不能为空。")
         if mock:
-            code = refine_code
-        else:
-            ctx = (f"[上下文 SPEC]\n{spec}\n\n[上下文 ARCH]\n{arch}\n\n[当前代码]\n{refine_code}\n\n"
-                   f"[用户修改请求]\n{refine_msg}\n\n[任务] 在现有代码基础上做增量修改，"
-                   f"只输出修改后的完整 <!DOCTYPE html> 文件，不要解释。")
-            html = _produce_html(REFINE_SYSTEM, ctx, "Engineer")
-            # 精修失败→保留上一版（不降级成离线模板，避免「假成功」）
-            if html is None:
-                # 摩擦信号：增量修改没产出合法 HTML，说明长上下文改写是当前短板
-                friction.record(project_id, "fell_back",
-                                "精修未产出合法 HTML，保留上一版", session_id=trace_id)
-            code = html if html is not None else refine_code
-    else:
+            friction.record(project_id, "mock_mode", "离线模式：未调用真实模型", session_id=trace_id)
+            yield {"type": "system", "message": "离线模板模式：本次不会调用真实模型。"}
+            if refining:
+                return result("unchanged", refine_code, "离线模式无法执行精修，已保留上一版。")
+        for agent, label, icon, prompt in (
+                ("PM", "产品经理 · Emma", "📋", PM_SYSTEM),
+                ("Architect", "架构师 · Bob", "🏗️", ARCH_SYSTEM)):
+            yield {"type": "agent_start", "agent": agent, "label": label, "icon": icon}
+            value = spec if agent == "PM" else arch
+            if not (refining and value):
+                value = ((_mock_spec(idea) if agent == "PM" else _mock_arch(idea)) if mock else
+                         _agent(agent, [{"role": "system", "content": prompt},
+                                        {"role": "user", "content": idea if agent == "PM" else spec}]))
+            if not value.strip():
+                raise PipelineFailure(f"{agent} 未产出有效上下文，已停止。")
+            if agent == "PM":
+                spec = value
+            else:
+                arch = value
+            yield {"type": "agent_output", "agent": agent, "output": value}
+
+        yield {"type": "agent_start", "agent": "Engineer", "label": "工程师 · Alex", "icon": "⚙️"}
         if mock:
             code = _mock_app(idea)
+        elif refining:
+            ctx = f"[SPEC]\n{spec}\n[ARCH]\n{arch}\n[当前代码]\n{refine_code}\n[用户修改请求]\n{refine_msg}"
+            code = _produce_html(REFINE_SYSTEM, ctx, "Engineer")
+            if code is None:
+                raise PipelineFailure("精修未产出完整 HTML，已保留上一版。")
+            if code.strip() == refine_code.strip():
+                return result("unchanged", refine_code, "模型未产生代码变更，已保留上一版。")
         else:
-            # 复杂/超长规格：先规划后构建，避免模型被长提示带偏产出近空输出
+            ctx = _eng_user(spec, arch)
             complex_spec = _tok(spec) > 1200 or len(idea) > 350
             if complex_spec:
-                plan = _make_plan(idea, spec) or spec
-                ctx = (f"[结构化实现计划]\n{plan}\n\n"
-                       f"[任务] 请基于该计划构建一个完整、自包含的单文件 HTML 应用，"
-                       f"实现计划中的【全部】模块，以 <!DOCTYPE html> 开头、</html> 结尾，"
-                       f"不要省略任何模块、不要输出代码片段。")
-                html = _produce_html(ENG_COMPLEX_SYSTEM, ctx, "Engineer", max_tokens=28000)
-                if html is None:
-                    # 二次尝试：回到原始 spec + 强约束，更高 token 预算
-                    ctx2 = _eng_user(spec, arch) + "\n\n请务必输出【完整】单文件 HTML，覆盖所有功能，不要省略。"
-                    html = _produce_html(ENG_COMPLEX_SYSTEM, ctx2, "Engineer", max_tokens=28000)
-            else:
-                html = _produce_html(ENG_SYSTEM, _eng_user(spec, arch), "Engineer")
-            if html is None:
-                # 真实 LLM 调用成功但两次都未产出合法 HTML：降级离线模板并标记 fell_back
+                plan = _agent("Planner", [{"role": "system", "content": PLAN_SYSTEM},
+                                          {"role": "user", "content": f"{idea}\n{spec}"}], max_tokens=1200)
+                ctx += "\n[实现计划]\n" + plan
+            code = _produce_html(ENG_COMPLEX_SYSTEM if complex_spec else ENG_SYSTEM,
+                                 ctx, "Engineer", max_tokens=28000 if complex_spec else 16000)
+            if code is None:
+                mock = True
                 code = _mock_app(idea)
-                fell_back = True
-                last_err = "工程师输出不是有效 HTML（缺少 <!DOCTYPE/<html> 或长度不足），已回退离线模板"
-                # 摩擦信号：调用成功却拿不到合法 HTML，属于最难排查的一类失败
-                friction.record(project_id, "fell_back", last_err, session_id=trace_id)
-            else:
-                code = html
-    # LLMOps：记录本次生成的 TTFT（proxy：pipeline 启动到工程师首段输出的墙钟）
-    gen_ttft = int((time.time() - t_start) * 1000)
-    obs.record_ttft(model, gen_ttft)
-    yield {"type": "agent_output", "agent": "Engineer", "output": code[:1800]}
-    yield {"type": "app_code", "code": code}
-
-    # 4) Reviewer
-    yield {"type": "agent_start", "agent": "Reviewer", "label": "评审 · Mike", "icon": "🔍"}
-    verdict = "approve"
-    review_text = ""
-    if mock:
-        review_text = "【离线模式】模板应用结构完整、含 localStorage 持久化与基础交互，默认通过。"
-    else:
-        r = _agent("Reviewer", [{"role": "system", "content": REV_SYSTEM}, {"role": "user", "content": f"SPEC:\n{spec}\n\nCODE:\n{code}"}], max_tokens=1500)
-        rj = _extract_json(r or "")
-        review_text = r or "{}"
-        verdict = (rj or {}).get("verdict", "approve")
-    yield {"type": "agent_output", "agent": "Reviewer", "output": review_text}
-
-    # 5) optional fix loop
-    if verdict == "fix" and not mock:
-        yield {"type": "agent_start", "agent": "Engineer", "label": "工程师 · Alex（修复）", "icon": "⚙️"}
-        patch = (_extract_json(review_text) or {}).get("patch_instructions", "")
-        # 摩擦信号：评审打回 = 首版不达标，这类任务的 prompt/约束需要复盘
-        friction.record(project_id, "review_fix",
-                        f"评审打回：{str(patch)[:200]}", session_id=trace_id)
-        ctx = f"[修复指引]\n{patch}\n\n[当前代码]\n{code}\n\n[任务] 按指引修改，只输出修改后的完整 <!DOCTYPE html> 文件，不要解释。"
-        html = _produce_html(FIX_SYSTEM, ctx, "Engineer-Fix")
-        if html is not None:
-            code = html
-            yield {"type": "app_code", "code": code}
-            yield {"type": "agent_output", "agent": "Engineer", "output": code[:1800]}
+                friction.record(project_id, "fell_back", "格式修正失败，明确降级离线模板", session_id=trace_id)
+                yield {"type": "system", "message": "生成内容两次格式校验失败，已降级离线模板，本次并非真实生成。"}
+        obs.record_ttft(model, int((time.time() - t_start) * 1000))
+        yield {"type": "agent_output", "agent": "Engineer", "output": code[:1800]}
+        yield {"type": "agent_start", "agent": "Reviewer", "label": "评审 · Mike", "icon": "🔍"}
+        verdict = "unreviewed"
+        if mock:
+            yield {"type": "agent_output", "agent": "Reviewer", "output": "离线模板：未进行真实模型评审。"}
         else:
-            # 摩擦信号：连修复环都没产出合法 HTML，问题已被确认但未被解决
-            friction.record(project_id, "fix_failed",
-                            "修复输出非合法 HTML，保留修复前版本", session_id=trace_id)
-            yield {"type": "agent_output", "agent": "Engineer",
-                   "output": "（修复返回内容不是完整 HTML，已保留修复前的版本）"}
-
-    # If real LLM calls failed (e.g. OpenRouter provider-restriction 404) OR a
-    # call succeeded but returned incomplete/truncated HTML, we fell back to the
-    # offline template above — flag it so the UI never shows a fake "real
-    # generation" success.
-    if (erred or fell_back) and not mock:
-        if erred:
-            reason = (
-                f"模型 {model} 的真实 LLM 调用失败：{last_err[:200]}。"
-                "常见原因：OpenRouter 账户的『Allowed Providers』仅允许 deepseek，"
-                "需到 https://openrouter.ai/settings/privacy 改为 All providers。"
-            )
-        else:
-            reason = last_err or "真实模型输出不完整，已回退离线模板。"
-        yield {"type": "system", "message": f"⚠️ {reason} 本次并非真实生成。"}
-        mock = True
-
-    # 安全审计：对最终生成的单文件应用做 SAST 风格扫描（OWASP Top 10:2025）。
-    sec = security.scan_html(code)
-    yield {"type": "security", "score": sec["score"], "findings": sec["findings"],
-           "summary": security.summarize(sec)}
-
-    return {"spec": spec, "arch": arch, "code": code, "model": model,
-            "mock": mock, "verdict": verdict, "security": sec}
+            for attempt in range(2):
+                text, data = review(code)
+                yield {"type": "agent_output", "agent": "Reviewer", "output": text}
+                verdict = data["verdict"]
+                if verdict == "approve":
+                    break
+                if attempt:
+                    raise PipelineFailure("修复后复审仍未通过，已停止，不再循环调用。")
+                friction.record(project_id, "review_fix", data["patch_instructions"][:200], session_id=trace_id)
+                yield {"type": "agent_start", "agent": "Engineer", "label": "工程师 · Alex（修复）", "icon": "⚙️"}
+                ctx = f"[SPEC]\n{spec}\n[用户修改请求]\n{refine_msg or idea}\n[修复指引]\n{data['patch_instructions']}\n[当前代码]\n{code}"
+                code = _produce_html(FIX_SYSTEM, ctx, "Engineer-Fix")
+                if code is None:
+                    friction.record(project_id, "fix_failed", "修复未产出完整 HTML", session_id=trace_id)
+                    raise PipelineFailure("修复未产出完整 HTML，未交付新版本。")
+                yield {"type": "agent_output", "agent": "Engineer", "output": code[:1800]}
+                yield {"type": "agent_start", "agent": "Reviewer", "label": "评审 · Mike（复审）", "icon": "🔍"}
+        if refining and code.strip() == refine_code.strip():
+            return result("unchanged", refine_code, "修复后代码无变更，已保留上一版。", verdict)
+        final = result("degraded" if mock else "success", code, verdict=verdict)
+        sec = final["security"]
+        yield {"type": "security", "score": sec["score"], "findings": sec["findings"], "summary": security.summarize(sec)}
+        # Transport releases app_code only AFTER the atomic version commit.
+        yield {"type": "app_code", "code": code}
+        return final
+    except PipelineFailure as exc:
+        friction.record(project_id, "fell_back", str(exc), session_id=trace_id)
+        return result("failed", refine_code or "", str(exc))
