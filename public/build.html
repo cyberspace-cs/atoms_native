@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atoms Native — 开始构建 · 把想法变成应用</title>
+  <meta name="description" content="描述你的想法，AI 智能体团队协作生成可运行的应用。输入零门槛，点「开始构建」后才需要登录，几分钟内预览、复制、导出，或进入完整工作台精修。">
+  <script>document.documentElement.dataset.theme = (function () { try { return localStorage.getItem("an_theme") || "light" } catch (e) { return "light" } })();</script>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
+  <link rel="stylesheet" href="./home.css">
+  <link rel="stylesheet" href="./theme.css">
+  <script src="./theme.js" defer></script>
+  <style>
+    /* 复用 home.css tokens（--paper/--ink/--muted/--accent/--line）；深色模式由 token 翻转 + 本页少量覆盖 */
+    .hidden {
+      display: none !important;
+    }
+
+    body {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 20px 20px 60px;
+      font-family: Georgia, 'Songti SC', serif;
+      color: var(--ink);
+      background: var(--paper);
+      min-height: 100vh;
+      box-sizing: border-box
+    }
+
+    a {
+      color: inherit
+    }
+
+    nav[aria-label="主导航"] {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 0 26px;
+      font-family: system-ui, sans-serif;
+      font-size: 14px
+    }
+
+    nav .brand {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: .5px;
+      margin-right: auto
+    }
+
+    nav .brand .logo {
+      font-size: 20px;
+      vertical-align: -3px;
+      margin-right: 4px
+    }
+
+    .skip {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      background: var(--paper);
+      padding: 8px 14px;
+      z-index: 99
+    }
+
+    .skip:focus {
+      left: 8px;
+      top: 8px
+    }
+
+    main {
+      text-align: center
+    }
+
+    h1 {
+      font-size: clamp(30px, 5vw, 44px);
+      margin: 26px 0 10px;
+      font-weight: 400;
+      letter-spacing: .5px
+    }
+
+    h1 b {
+      color: var(--accent);
+      font-weight: inherit
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 15px;
+      margin: 0 0 34px;
+      font-family: system-ui, sans-serif
+    }
+
+    .composer {
+      max-width: 640px;
+      margin: 0 auto;
+      text-align: left
+    }
+
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--line);
+      background: var(--card, #fff);
+      color: var(--ink);
+      border-radius: 14px;
+      padding: 16px 18px;
+      font: inherit;
+      font-size: 16px;
+      line-height: 1.6;
+      resize: vertical;
+      min-height: 110px;
+      box-shadow: 0 8px 35px rgba(51, 57, 24, .06)
+    }
+
+    textarea:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+      opacity: .7
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 18px
+    }
+
+    .chips button {
+      font: inherit;
+      font-family: system-ui, sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s
+    }
+
+    .chips button:hover {
+      color: var(--accent);
+      border-color: var(--accent)
+    }
+
+    .go {
+      display: block;
+      width: 100%;
+      font: inherit;
+      font-family: system-ui, sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 15px;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s
+    }
+
+    .go:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(70, 89, 223, .3)
+    }
+
+    .go:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none
+    }
+
+    .zero-gate {
+      margin-top: 10px;
+      font-family: system-ui, sans-serif;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center
+    }
+
+    /* ---- 内嵌登录卡（点生成时才出现，想法保留） ---- */
+    .auth-card {
+      max-width: 420px;
+      margin: 26px auto 0;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 22px;
+      background: var(--card, #fff);
+      box-shadow: 0 8px 35px rgba(51, 57, 24, .06);
+      font-family: system-ui, sans-serif
+    }
+
+    .auth-card .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px
+    }
+
+    .auth-card .tab {
+      flex: 1;
+      font: inherit;
+      font-size: 14px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      background: transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--muted)
+    }
+
+    .auth-card .tab.on {
+      color: var(--accent);
+      border-color: var(--accent);
+      font-weight: 600
+    }
+
+    .auth-card input {
+      width: 100%;
+      box-sizing: border-box;
+      font: inherit;
+      font-size: 14px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper);
+      color: var(--ink);
+      margin-bottom: 10px
+    }
+
+    .auth-card .primary {
+      width: 100%;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer
+    }
+
+    .auth-card .err {
+      color: #d64562;
+      font-size: 13px;
+      min-height: 18px;
+      margin-top: 8px
+    }
+
+    .auth-card .keep {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px
+    }
+
+    /* ---- 极简时间线（building） ---- */
+    .progress {
+      max-width: 640px;
+      margin: 30px auto 0;
+      text-align: left
+    }
+
+    .agents {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 16px;
+      font-family: system-ui, sans-serif
+    }
+
+    .agents .node {
+      flex: 1;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      opacity: .45;
+      transition: opacity .3s
+    }
+
+    .agents .node .ic {
+      display: block;
+      font-size: 22px;
+      margin-bottom: 4px
+    }
+
+    .agents .node.active,
+    .agents .node.done {
+      opacity: 1
+    }
+
+    .agents .node.active {
+      color: var(--accent);
+      font-weight: 600
+    }
+
+    .progress-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--line);
+      overflow: hidden
+    }
+
+    .progress-bar i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+      border-radius: 999px;
+      transition: width .4s
+    }
+
+    .status-line {
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      color: var(--muted);
+      margin: 14px 0 0;
+      min-height: 20px
+    }
+
+    .status-line.err {
+      color: #d64562
+    }
+
+    .retry {
+      margin-top: 12px;
+      font: inherit;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 10px;
+      padding: 9px 22px;
+      cursor: pointer
+    }
+
+    /* ---- 结果（done） ---- */
+    .result {
+      margin-top: 26px;
+      text-align: left
+    }
+
+    .result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-family: system-ui, sans-serif
+    }
+
+    .result-actions button {
+      font: inherit;
+      font-size: 14px;
+      padding: 9px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--card, #fff);
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color .15s, color .15s
+    }
+
+    .result-actions button:hover {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    .result-actions .hl {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff
+    }
+
+    .result-actions .hl:hover {
+      color: #fff
+    }
+
+    .frame-wrap {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--card, #fff);
+      box-shadow: 0 8px 35px rgba(51, 57, 24, .06)
+    }
+
+    #preview {
+      width: 100%;
+      height: min(70vh, 640px);
+      border: none;
+      display: block;
+      background: #fff
+    }
+
+    footer {
+      margin-top: 56px;
+      font-family: system-ui, sans-serif;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center
+    }
+
+    footer a {
+      color: var(--muted)
+    }
+
+    /* ---- 深色模式本页硬编码色覆盖 ---- */
+    html[data-theme="dark"] textarea,
+    html[data-theme="dark"] .auth-card,
+    html[data-theme="dark"] .frame-wrap,
+    html[data-theme="dark"] .result-actions button {
+      background: #171a19
+    }
+
+    html[data-theme="dark"] #preview {
+      background: #fff
+    }
+
+    html[data-theme="dark"] .go:hover {
+      box-shadow: 0 8px 24px rgba(139, 157, 255, .25)
+    }
+
+    @media(max-width:560px) {
+      .agents .node {
+        font-size: 11px
+      }
+
+      .agents .node .ic {
+        font-size: 18px
+      }
+
+      h1 {
+        margin-top: 10px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip" href="#idea">跳到想法输入</a>
+  <nav aria-label="主导航">
+    <span class="brand"><span class="logo" aria-hidden="true">⚛</span>Atoms Native</span>
+    <a href="./index.html">← 返回首页</a>
+    <a href="./studio.html" title="项目管理、对话精修、版本回滚等完整能力">完整工作台 ↗</a>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换深色模式">🌙</button>
+  </nav>
+
+  <main>
+    <h1>把想法<b>变成应用</b></h1>
+    <p class="sub">一句话描述 → AI 智能体团队（Emma · Bob · Alex · Mike）协作构建 → 立即预览</p>
+
+    <!-- 状态 input：输入零门槛 -->
+    <form id="ideaForm" class="composer">
+      <label for="idea" class="sub" style="display:block;text-align:left;margin-bottom:8px">你的想法</label>
+      <textarea id="idea" rows="3" maxlength="2000" required placeholder="例如：一个帮团队管理每日饮水与目标打卡的小工具，带统计图表"></textarea>
+      <div class="chips" id="chips" aria-label="示例场景">
+        <button type="button">🎮 2048 数字滑块小游戏</button>
+        <button type="button">📝 团队每日站会记录板</button>
+        <button type="button">📊 个人 BMI 健康计算器</button>
+      </div>
+      <button id="buildBtn" class="go" type="submit">开始构建 →</button>
+      <p class="zero-gate">输入零门槛 · 点「开始构建」后才需要登录（想法会保留）</p>
+    </form>
+
+    <!-- 状态 auth：内嵌登录卡，idea 全程保留 -->
+    <section id="authCard" class="auth-card hidden" aria-label="登录或注册">
+      <div class="tabs" role="tablist">
+        <button class="tab on" type="button" data-mode="login" role="tab" aria-selected="true">登录</button>
+        <button class="tab" type="button" data-mode="register" role="tab" aria-selected="false">注册</button>
+      </div>
+      <form id="authForm" autocomplete="off">
+        <input id="username" placeholder="用户名" autocomplete="username">
+        <input id="password" type="password" placeholder="密码" autocomplete="current-password">
+        <button class="primary" id="authBtn" type="submit">登录并开始构建</button>
+        <div id="authErr" class="err" role="alert"></div>
+        <p class="keep">你的想法已保留，登录后立即开始构建。</p>
+      </form>
+    </section>
+
+    <!-- 状态 building：极简智能体时间线 -->
+    <section id="progress" class="progress hidden" aria-label="生成进度">
+      <div class="agents">
+        <div class="node" data-agent="PM"><span class="ic" aria-hidden="true">📋</span>Emma 需求</div>
+        <div class="node" data-agent="Architect"><span class="ic" aria-hidden="true">🏗️</span>Bob 架构</div>
+        <div class="node" data-agent="Engineer"><span class="ic" aria-hidden="true">⚙️</span>Alex 工程</div>
+        <div class="node" data-agent="Reviewer"><span class="ic" aria-hidden="true">🔍</span>Mike 评审</div>
+      </div>
+      <div id="pbar" class="progress-bar" role="progressbar" aria-label="生成进度" aria-valuemin="0" aria-valuemax="100"
+        aria-valuenow="0"><i id="pfill"></i></div>
+      <p id="statusLine" class="status-line" role="status"></p>
+      <button id="retryBtn" class="retry hidden" type="button">↻ 重试</button>
+    </section>
+
+    <!-- 状态 done：预览 + 操作条 -->
+    <section id="result" class="result hidden" aria-label="生成结果">
+      <div class="result-actions">
+        <button id="againBtn" type="button">🔄 再来一个</button>
+        <button id="wbBtn" class="hl" type="button">🧭 进完整工作台精修</button>
+        <button id="copyBtn" type="button">📋 复制</button>
+        <button id="exportBtn" type="button">⬇️ 导出</button>
+      </div>
+      <div class="frame-wrap">
+        <iframe id="preview" title="生成的应用预览"
+          sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <footer>Atoms Native · <a href="./index.html">首页</a> · <a href="./overview.html">了解产品</a> · <a
+      href="./discover.html">发现作品</a></footer>
+
+  <script>
+    // ---------- build 页状态机：input → auth → building → done（独立于 app.js，零三栏工作台耦合） ----------
+    (function () {
+      "use strict";
+      var $ = function (id) { return document.getElementById(id); };
+      var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+
+      var idea = $("idea"), buildBtn = $("buildBtn"), authCard = $("authCard"), authErr = $("authErr"),
+        progress = $("progress"), statusLine = $("statusLine"), retryBtn = $("retryBtn"),
+        result = $("result"), preview = $("preview"), pbar = $("pbar"), pfill = $("pfill");
+      var st = { token: "", pid: "", code: "", aborted: false, authMode: "login", building: false };
+      try { st.token = localStorage.getItem("an_token") || ""; } catch (e) { }
+
+      // 想法草稿：刷新/误触返回不丢（?idea= 深链优先）
+      try {
+        var q = new URLSearchParams(location.search).get("idea");
+        var draft = localStorage.getItem("an_idea_draft");
+        if (q) idea.value = q;
+        else if (draft && !idea.value) idea.value = draft;
+        idea.addEventListener("input", function () { try { localStorage.setItem("an_idea_draft", idea.value); } catch (e) { } });
+      } catch (e) { }
+
+      // 示例 chip
+      Array.prototype.forEach.call($("chips").querySelectorAll("button"), function (b) {
+        b.addEventListener("click", function () { idea.value = b.textContent.replace(/^[^\u4e00-\u9fa5A-Za-z0-9]+/, ""); idea.focus(); });
+      });
+
+      function setPhase(v, text, err) {
+        pbar.setAttribute("aria-valuenow", String(v));
+        pfill.style.width = v + "%";
+        statusLine.className = "status-line" + (err ? " err" : "");
+        statusLine.textContent = text;
+      }
+      function markAgent(name) {
+        Array.prototype.forEach.call(document.querySelectorAll(".agents .node"), function (n) {
+          var order = ["PM", "Architect", "Engineer", "Reviewer"];
+          var i = order.indexOf(n.dataset.agent), j = order.indexOf(name);
+          if (j >= 0 && i < j) n.classList.add("done");
+          if (i === j) n.classList.add("active");
+        });
+      }
+      function resetTimeline() {
+        Array.prototype.forEach.call(document.querySelectorAll(".agents .node"), function (n) { n.classList.remove("active", "done"); });
+        pbar.setAttribute("aria-valuenow", "0");
+        pfill.style.width = "0%";
+        statusLine.className = "status-line";
+        statusLine.textContent = "";
+        retryBtn.classList.add("hidden");
+      }
+      function show(section) {
+        [authCard, progress, result].forEach(function (s) { s.classList.add("hidden"); });
+        if (section) section.classList.remove("hidden");
+      }
+
+      // ---------- 提交（终态吸收：building 中不可重复触发） ----------
+      $("ideaForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (st.building) return;
+        var v = idea.value.trim();
+        if (!v) { statusLine.textContent = "先描述你的想法"; statusLine.className = "status-line err"; idea.focus(); return; }
+        if (!st.token) { show(authCard); $("username").focus(); return; }
+        runBuild(v);
+      });
+      retryBtn.addEventListener("click", function () { var v = idea.value.trim(); if (v && !st.building) runBuild(v); });
+
+      // ---------- 内嵌登录卡 ----------
+      Array.prototype.forEach.call(authCard.querySelectorAll(".tab"), function (t) {
+        t.addEventListener("click", function () {
+          st.authMode = t.dataset.mode;
+          Array.prototype.forEach.call(authCard.querySelectorAll(".tab"), function (x) {
+            var on = x === t;
+            x.classList.toggle("on", on);
+            x.setAttribute("aria-selected", on ? "true" : "false");
+          });
+          $("authBtn").textContent = st.authMode === "login" ? "登录并开始构建" : "注册并开始构建";
+        });
+      });
+      $("authForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var u = $("username").value.trim(), p = $("password").value;
+        if (!u || !p) { authErr.textContent = "用户名和密码都要填"; return; }
+        $("authBtn").disabled = true;
+        fetch("./api/auth/" + st.authMode, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p })
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }).then(function (res) {
+          $("authBtn").disabled = false;
+          if (!res.ok || !res.j.token) { authErr.textContent = res.j.detail || res.j.error || "登录失败，再试一次"; return; }
+          st.token = res.j.token;
+          try { localStorage.setItem("an_token", res.j.token); } catch (e) { }
+          authErr.textContent = "";
+          show(progress); resetTimeline();
+          runBuild(idea.value.trim());
+        }).catch(function () { $("authBtn").disabled = false; authErr.textContent = "网络异常，再试一次"; });
+      });
+
+      // ---------- 生成主流程 ----------
+      function authHeaders() { return st.token ? { "Authorization": "Bearer " + st.token } : {}; }
+      function fail(msg) {
+        st.building = false;
+        buildBtn.disabled = false;
+        setPhase(pbar.getAttribute("aria-valuenow") || 0, msg, true);
+        retryBtn.classList.remove("hidden");
+      }
+      function runBuild(v) {
+        st.building = true; st.code = ""; st.aborted = false;
+        buildBtn.disabled = true;
+        show(progress); resetTimeline();
+        setPhase(5, "🚀 开始构建…");
+        fetch("./api/projects", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ idea: v, title: v.slice(0, 30) })
+        }).then(function (r) {
+          if (r.status === 401) { st.token = ""; try { localStorage.removeItem("an_token"); } catch (e) { } show(authCard); st.building = false; buildBtn.disabled = false; return null; }
+          return r.json().then(function (j) {
+            if (!r.ok || !j.project || !j.project.id) throw new Error(j.detail || "创建项目失败");
+            return j.project.id;
+          });
+        }).then(function (pid) {
+          if (!pid) return;
+          st.pid = pid;
+          return streamGenerate(pid);
+        }).catch(function (e) {
+          if (!st.aborted) fail("出错：" + (e && e.message ? e.message : "网络异常"));
+        });
+      }
+      function streamGenerate(pid) {
+        var ctrl = new AbortController();
+        var currentRun = st.building;
+        return fetch("./api/generate", {
+          method: "POST", signal: ctrl.signal,
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ project_id: pid, model: null })
+        }).then(function (r) {
+          if (r.status === 401) { st.token = ""; try { localStorage.removeItem("an_token"); } catch (e) { } show(authCard); st.building = false; buildBtn.disabled = false; return; }
+          if (!r.ok || !r.body) throw new Error("服务不可用（" + r.status + "）");
+          var reader = r.body.getReader(), buf = "";
+          function pump() {
+            return reader.read().then(function (chunk) {
+              if (!currentRun || st.aborted) { try { reader.cancel(); } catch (e) { } return; }
+              if (chunk.done) { finish(); return; }
+              buf += new TextDecoder("utf-8").decode(chunk.value, { stream: true });
+              var parts = buf.split("\n\n");
+              buf = parts.pop();
+              parts.forEach(function (blk) {
+                blk.split("\n").forEach(function (line) {
+                  if (line.indexOf("data: ") !== 0) return;
+                  var ev; try { ev = JSON.parse(line.slice(6)); } catch (e) { return; }
+                  handleEvent(ev);
+                });
+              });
+              return pump();
+            });
+          }
+          return pump();
+        }).catch(function (e) {
+          if (!st.aborted && st.building) fail("连接中断：" + (e && e.name === "AbortError" ? "已取消" : "请重试"));
+        });
+      }
+      var PHASE_TEXT = {
+        PM: ["📋", "Emma 正在梳理需求规格…", 20], Architect: ["🏗️", "Bob 正在搭建应用架构…", 50],
+        Engineer: ["⚙️", "Alex 正在编写代码…", 80], Reviewer: ["🔍", "Mike 正在评审打磨…", 95], done: ["✅", "构建完成", 100]
+      };
+      function handleEvent(ev) {
+        if (ev.type === "agent_start" && PHASE_TEXT[ev.agent]) {
+          markAgent(ev.agent);
+          setPhase(PHASE_TEXT[ev.agent][2], PHASE_TEXT[ev.agent][0] + " " + PHASE_TEXT[ev.agent][1]);
+        } else if (ev.type === "app_code" && ev.code) {
+          st.code = ev.code;
+          preview.srcdoc = ev.code; // 提前可见：流式收到即渲染（沙箱隔离）
+        } else if (ev.type === "security" && typeof ev.score === "number") {
+          setPhase(pbar.getAttribute("aria-valuenow"), "🔐 安全扫描完成：得分 " + ev.score + "/100");
+        } else if (ev.type === "done") {
+          finish();
+        } else if (ev.type === "error") {
+          fail("出错：" + (ev.message || "未知错误"));
+        }
+      }
+      function finish() {
+        if (!st.building) return;
+        st.building = false;
+        buildBtn.disabled = false;
+        markAgent("done");
+        setPhase(100, "✅ 构建完成，预览已就绪");
+        if (st.code) preview.srcdoc = st.code;
+        if (!st.code) preview.srcdoc = "<!DOCTYPE html><html><body style='font-family:system-ui;padding:40px'>生成已完成，但未收到代码，请到完整工作台查看。</body></html>";
+        try { localStorage.removeItem("an_idea_draft"); } catch (e) { }
+        show(result);
+      }
+
+      // ---------- done 操作条 ----------
+      $("againBtn").addEventListener("click", function () {
+        st.pid = ""; st.code = ""; preview.srcdoc = "";
+        show(null); buildBtn.disabled = false; buildBtn.textContent = "开始构建 →"; idea.focus();
+      });
+      $("wbBtn").addEventListener("click", function () {
+        if (!st.pid) return;
+        try { sessionStorage.setItem("an_open_project", st.pid); } catch (e) { }
+        location.href = "./studio.html?project=" + encodeURIComponent(st.pid);
+      });
+      $("copyBtn").addEventListener("click", function () {
+        navigator.clipboard.writeText(st.code || "").then(function () { $("copyBtn").textContent = "✅ 已复制"; setTimeout(function () { $("copyBtn").textContent = "📋 复制"; }, 1500); });
+      });
+      $("exportBtn").addEventListener("click", function () {
+        if (!st.code) return;
+        var blob = new Blob([st.code], { type: "text/html" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "atoms-app.html";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    })();
+  </script>
+</body>
+
+</html>

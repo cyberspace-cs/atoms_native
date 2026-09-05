@@ -60,9 +60,14 @@ GUARDS = [
     # 2026-09-05 双版本首页（简约版/详细版）
     ("public/overview.html", "member-card", "详细版四位 AI 团队成员卡在位"),
     ("public/index.html", 'id="idea"', "简约版想法输入框在位"),
-    ("public/index.html", 'action="./studio.html"', "简约版表单 GET 提交 Studio"),
+    ("public/index.html", 'action="./build.html"', "简约版表单 GET 提交 build 简约生成页"),
     ("public/index.html", 'href="./overview.html"', "简约版 → 详细版切换链接"),
     ("public/overview.html", 'href="./index.html"', "详细版 → 简约版返回链接"),
+    # 2026-09-05 build.html 简约生成页成为默认入口（Studio 降级为备选）
+    ("public/build.html", 'role="status"', "生成页 live region 容器先于内容存在（WCAG 4.1.3）"),
+    ("public/build.html", 'sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"', "预览 iframe 沙箱在位且无 allow-same-origin"),
+    ("public/build.html", 'id="authCard"', "内嵌登录卡在位（bolt 模式：点生成才登录）"),
+    ("public/build.html", "an_open_project", "完成后可转完整工作台深链"),
     # 2026-09-05 全站双主题绑定（浅色默认，localStorage 跨页一致）
     ("public/theme.js", "an_theme", "主题绑定持久化逻辑在位"),
     ("public/theme.js", "themeToggle", "主题切换按钮接线在位"),

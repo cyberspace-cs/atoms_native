@@ -206,13 +206,13 @@ check("H1 详细版存在且含四位 AI 团队成员卡",
       f"member-card 数: {overview.count('member-card')}")
 check("H2 详细版工作流程四步 + 常见问题三条",
       overview.count('class="step glass"') == 4 and overview.count("<details>") == 3)
-check("H3 简约版想法表单在位（GET 提交 Studio + 必填 + 长度上限）",
-      'action="./studio.html"' in minimal and 'id="idea"' in minimal
+check("H3 简约版想法表单在位（GET 提交 build 简约生成页 + 必填 + 长度上限）",
+      'action="./build.html"' in minimal and 'id="idea"' in minimal
       and "required" in minimal and "maxlength" in minimal)
 check("H4 双版本互切链接双向存在",
       'href="./overview.html"' in minimal and 'href="./index.html"' in overview)
-check("H5 简约版四个快捷场景全部指向 Studio 并带入想法",
-      minimal.count('href="./studio.html?idea=') == 4)
+check("H5 简约版四个快捷场景全部指向 build 简约生成页并带入想法",
+      minimal.count('href="./build.html?idea=') == 4)
 check("H6 两版 title 与 meta description 齐全且互不相同",
       all(f'<meta name="description" content="' in p for p in (minimal, overview))
       and ("<title>Atoms Native — 把想法变成应用</title>" in minimal
@@ -256,6 +256,46 @@ for _page in ("discover", "plan", "portfolio", "admin"):
 _dark_new = home_css[home_css.find("data-theme"):] + overview_css[overview_css.find("data-theme"):]
 check("I10 新增深色块未使用低对比灰 #475569/#64748b（F3 同规）",
       "#475569" not in _dark_new and "#64748b" not in _dark_new)
+
+# ---------- J. build.html 简约生成页守卫（2026-09-05，docs/superpowers/specs/2026-09-05-build-page-default-entry-design.md） ----------
+# 证据：WCAG 4.1.3 Status Messages + F103（live region 容器必须先于内容存在）
+# https://w3c.github.io/wcag/understanding/status-messages ；MDN iframe sandbox/srcdoc（injection sink 必须沙箱化）
+build = (PUBLIC / "build.html").read_text(encoding="utf-8")
+build_compact = re.sub(r"\s+", "", build)  # IDE watcher 会重排 HTML 格式，断言对空白不敏感
+_j1 = re.search(r'<p\b[^>]*id="statusLine"[^>]*>\s*</p>', build)
+check("J1 live region 容器在初始 HTML 中先存在且为空（WCAG F103）",
+      bool(_j1) and 'role="status"' in _j1.group(0))
+check("J0 hidden 状态切换的 display:none 规则在位（四态互斥可见）",
+      ".hidden{display:none" in build_compact)
+check("J2 进度条 role=progressbar + aria-label + min/max/now 全家（MDN progressbar）",
+      'role="progressbar"' in build and 'aria-label="生成进度"' in build
+      and 'aria-valuemin="0"' in build and 'aria-valuemax="100"' in build
+      and 'aria-valuenow="0"' in build)
+check("J3 预览 iframe title 描述性且 sandbox 严于同源（srcdoc 是 injection sink）",
+      'title="生成的应用预览"' in build
+      and 'sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"' in build
+      and "allow-same-origin" not in build)
+check("J4 内嵌登录卡在位（登录/注册双 tab + 表单 + 想法保留提示）",
+      'id="authCard"' in build and 'data-mode="register"' in build
+      and 'id="authForm"' in build and "想法已保留" in build)
+check("J5 四智能体时间线节点（Emma/Bob/Alex/Mike 对应 4 个 data-agent）",
+      build.count('data-agent="') == 4 and "data-agent=\"PM\"" in build
+      and "data-agent=\"Architect\"" in build and "data-agent=\"Engineer\"" in build
+      and "data-agent=\"Reviewer\"" in build)
+check("J6 终态吸收 + 防抖：building 态重复提交被拦截且按钮禁用",
+      "if (st.building) return" in build and "buildBtn.disabled = true" in build)
+check("J7 想法草稿持久化（an_idea_draft：刷新不丢，成功后清除）",
+      "an_idea_draft" in build and 'localStorage.removeItem("an_idea_draft")' in build)
+check("J8 401 回退：清 token + 弹登录卡（sad path 状态复位）",
+      'localStorage.removeItem("an_token")' in build
+      and './api/auth/' in build and 'r.status === 401' in build)
+check("J9 SSE 事件接线（agent_start/app_code/security/done/error 全覆盖）",
+      all(k in build for k in ("agent_start", "app_code", "security", '"done"', '"error"')))
+check("J10 与完整工作台转接（sessionStorage an_open_project 深链）",
+      "an_open_project" in build and './studio.html?project=' in build)
+check("J11 主题三件套 + 防闪烁 + 切换按钮（build 页接入全站主题）",
+      "./theme.css" in build and "./theme.js" in build and 'id="themeToggle"' in build
+      and 'localStorage.getItem("an_theme")' in build)
 
 # ---------- 汇总 ----------
 print()

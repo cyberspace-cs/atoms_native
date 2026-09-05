@@ -66,7 +66,7 @@ with sync_playwright() as p:
     t1, d1 = meta_contract('/', 'Atoms Native — 把想法变成应用')
     assert_one_h1('/')
     internal_links_resolve('/')
-    assert page.locator('form.composer[action="./studio.html"]').count() == 1
+    assert page.locator('form.composer[action="./build.html"]').count() == 1
     assert page.locator('#idea').get_attribute('required') is not None
     assert page.locator('.ideas a').count() == 4, '简约版应有四个快捷场景'
     shortcut_hrefs = page.locator('.ideas a').evaluate_all('els => els.map(e => e.getAttribute("href"))')
@@ -104,9 +104,11 @@ with sync_playwright() as p:
     page.locator('#idea').fill(idea)
     page.get_by_role('button', name='开始构建').click()
     assert parse_qs(urlparse(page.url).query)['idea'] == [idea]
+    assert urlparse(page.url).path.endswith('/build.html'), '表单应提交到 build 简约生成页（默认入口）'
     expect(page.locator('#idea')).to_have_value(idea)
     page.goto(BASE + '/')
     page.get_by_role('link', name='◷ 专注工具').click()
+    assert urlparse(page.url).path.endswith('/build.html'), '快捷场景也应落 build 简约生成页'
     expect(page.locator('#idea')).to_have_value('制作一个番茄钟，支持开始暂停、休息提醒和今日专注次数统计')
     assert '番茄钟' in page.locator('#idea').input_value()
     screenshots = Path(tempfile.mkdtemp(prefix='atoms-home-review-'))
@@ -139,7 +141,7 @@ with sync_playwright() as p:
     page.click('#themeToggle')
     assert page.evaluate('document.documentElement.dataset.theme') == 'dark', '点击后应变深色'
     assert page.evaluate('localStorage.getItem("an_theme")') == 'dark', '选择应持久化到 localStorage'
-    page.get_by_role('link', name='进入 Studio').click()  # 跨页：Studio 必须保持深色（绑定核心）
+    page.get_by_role('link', name='完整工作台').click()  # 跨页：Studio 必须保持深色（绑定核心）
     page.wait_for_load_state()
     assert page.evaluate('document.documentElement.dataset.theme') == 'dark', '跨页颜色模式绑定失败'
     page.reload()
@@ -150,6 +152,82 @@ with sync_playwright() as p:
     page.evaluate('localStorage.removeItem("an_theme")')  # 还原默认态，不影响后续浏览器会话
     assert not console_errors, f'主题旅程控制台报错: {console_errors}'
     assert not bad_responses, f'主题旅程 4xx/5xx: {bad_responses}'
+
+    # ---------- 6. build.html 简约生成页（默认入口；证据：playwright.dev/docs/mock + /docs/auth + /docs/frames，
+    # WCAG 4.1.3 / F103 —— 只断最终态不断中间帧，401 sad path 断言状态复位） ----------
+    import json as _json
+    SSE_CODE = '<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"></head><body><h1>你好 Atoms</h1></body></html>'
+
+    def sse_body():
+        events = [
+            {"type": "agent_start", "agent": "PM"},
+            {"type": "agent_start", "agent": "Architect"},
+            {"type": "agent_start", "agent": "Engineer"},
+            {"type": "app_code", "code": SSE_CODE},
+            {"type": "security", "score": 95},
+            {"type": "done"},
+        ]
+        return "".join("data: " + _json.dumps(e, ensure_ascii=False) + "\n\n" for e in events)
+
+    page.route('**/api/projects', lambda route: route.fulfill(
+        status=200, content_type='application/json',
+        body=_json.dumps({"project": {"id": "pb1", "title": "书单", "idea": "书单"}})))
+    page.route('**/api/generate', lambda route: route.fulfill(
+        status=200, content_type='text/event-stream', body=sse_body()))
+    page.route('**/api/auth/register', lambda route: route.fulfill(
+        status=200, content_type='application/json',
+        body=_json.dumps({"token": "tok_build_1", "role": "user", "username": "builder1"})))
+    page.goto(BASE + '/build.html')
+    page.evaluate('localStorage.clear()')
+    page.reload()
+    # 未登录点生成 → 内嵌登录卡出现，想法保留（bolt 模式：登录卡在生成时刻）
+    page.locator('#idea').fill('书单应用')
+    page.locator('#buildBtn').click()
+    expect(page.locator('#authCard')).to_be_visible()
+    assert page.locator('#idea').input_value() == '书单应用', '登录卡弹出后想法必须保留'
+    # 注册 → token 持久化 → 自动续跑（无需再点一次）
+    page.get_by_role('tab', name='注册').click()
+    page.locator('#username').fill('builder1')
+    page.locator('#password').fill('pw123456')
+    page.locator('#authBtn').click()
+    try:
+        page.wait_for_function('localStorage.getItem("an_token") === "tok_build_1"', timeout=10000)
+    except Exception:
+        raise AssertionError(
+            f'登录成功后 token 必须持久化，实际: {page.evaluate("localStorage.getItem(\"an_token\")")!r}'
+            f' | authErr={page.locator("#authErr").text_content()!r} | statusLine={page.locator("#statusLine").text_content()!r}')
+    expect(page.locator('#statusLine')).to_contain_text('构建完成', timeout=10000)
+    assert page.locator('#pbar').get_attribute('aria-valuenow') == '100', '进度条终态必须是 100'
+    expect(page.locator('#result')).to_be_visible()
+    expect(page.frame_locator('#preview').locator('h1')).to_have_text('你好 Atoms'), 'srcdoc 内容必须在沙箱内真实渲染'
+    # 终态吸收：done 后回输入态可重新开始
+    page.get_by_role('button', name='再来一个').click()
+    expect(page.locator('#buildBtn')).to_be_enabled()
+
+    # 6b. 401 回退（sad path）：失效 token → 弹登录卡 + 清 token（状态复位）
+    page.route('**/api/projects', lambda route: route.fulfill(
+        status=401, content_type='application/json', body='{"detail":"token expired"}'))
+    page.goto(BASE + '/build.html')
+    page.evaluate('localStorage.setItem("an_token","expired")')
+    page.reload()  # 让页面把失效 token 读进内存（st.token），走真实 401 分支
+    page.locator('#idea').fill('书单应用')
+    page.locator('#buildBtn').click()
+    expect(page.locator('#authCard')).to_be_visible()
+    expect(page.locator('#progress')).to_be_hidden(), '401 后应退出 building 态（状态复位）'
+    try:
+        page.wait_for_function('localStorage.getItem("an_token") === null', timeout=5000)
+    except Exception:
+        raise AssertionError(
+            f'401 后必须清除失效 token，实际: {page.evaluate("localStorage.getItem(\"an_token\")")!r}')
+
+    # 6c. 刷新草稿回填（resumability：刷新不丢想法）
+    page.goto(BASE + '/build.html')
+    page.evaluate('localStorage.clear()')
+    page.locator('#idea').fill('复盘看板')
+    page.reload()
+    assert page.locator('#idea').input_value() == '复盘看板', '刷新后草稿必须回填'
+    page.evaluate('localStorage.clear()')
+    console_errors.clear(); bad_responses.clear()  # mock 401 属预期 sad path，不污染全局卫生断言
 
     assert not errors, errors
     browser.close()

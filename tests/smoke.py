@@ -100,7 +100,7 @@ def page_status(path):
 
 
 def main():
-    for path in ("/", "/index.html", "/overview.html"):
+    for path in ("/", "/index.html", "/overview.html", "/build.html"):
         check(f"static page 200: {path}", page_status(path) == 200)
 
     uname = "ci_" + "".join(random.choices(string.ascii_lowercase, k=8))

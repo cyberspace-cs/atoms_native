@@ -494,7 +494,7 @@
         if (res.status === 401) {
           // 未登录：把模板想法带给工作台，登录后输入框自动填充
           const it = ITEMS.find(x => String(x.id) === String(id));
-          location.href = './studio.html?idea=' + encodeURIComponent(it ? it.idea : '');
+          location.href = './build.html?idea=' + encodeURIComponent(it ? it.idea : '');
           return;
         }
         if (!res.ok) throw new Error('HTTP ' + res.status);
