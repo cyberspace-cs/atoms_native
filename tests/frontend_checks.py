@@ -163,7 +163,7 @@ check("E5 admin.html 角色切换调用 set-role",
 # F1 每个页面生效的 CSS（内联 style 或所链接的 .css 文件）都要有键盘焦点样式
 #    + 尊重减弱动效偏好
 ALL_PAGES = ("index.html", "discover.html", "studio.html", "team.html",
-             "plan.html", "portfolio.html", "admin.html")
+             "plan.html", "portfolio.html", "admin.html", "overview.html")
 for page in ALL_PAGES:
     body = (PUBLIC / page).read_text(encoding="utf-8")
     css_all = body
@@ -195,6 +195,34 @@ check("G2 发现页分类 chips 带计数",
       "分类 chip 应显示该分类下的模板数量")
 check("G3 发现页示例链接在新窗口打开且隔离",
       'rel="noopener"' in discover and "/sample" in discover)
+
+# ---------- H. 双版本首页守卫（2026-09-05 简约版/详细版，docs/homepage-two-editions.md） ----------
+# 证据：Lighthouse SEO 审计（document-title / meta-description / viewport / 可达锚点）
+# 与 a11y 自动化可靠子集（lang/title/label——WebAIM/Deque 结构性检查）
+minimal = (PUBLIC / "index.html").read_text(encoding="utf-8")
+overview = (PUBLIC / "overview.html").read_text(encoding="utf-8")
+check("H1 详细版存在且含四位 AI 团队成员卡",
+      overview.count('class="member-card') == 4,
+      f"member-card 数: {overview.count('member-card')}")
+check("H2 详细版工作流程四步 + 常见问题三条",
+      overview.count('class="step glass"') == 4 and overview.count("<details>") == 3)
+check("H3 简约版想法表单在位（GET 提交 Studio + 必填 + 长度上限）",
+      'action="./studio.html"' in minimal and 'id="idea"' in minimal
+      and "required" in minimal and "maxlength" in minimal)
+check("H4 双版本互切链接双向存在",
+      'href="./overview.html"' in minimal and 'href="./index.html"' in overview)
+check("H5 简约版四个快捷场景全部指向 Studio 并带入想法",
+      minimal.count('href="./studio.html?idea=') == 4)
+check("H6 两版 title 与 meta description 齐全且互不相同",
+      all(f'<meta name="description" content="' in p for p in (minimal, overview))
+      and ("<title>Atoms Native — 把想法变成应用</title>" in minimal
+           and "<title>Atoms Native — 详细版" in overview)
+      and 'lang="zh' in minimal and 'lang="zh' in overview)
+check("H7 两版均为相对路径资源（子路径部署安全，无绝对 /api、/public）",
+      all('href="/' not in p and 'src="/' not in p and "'/api" not in p
+          for p in (minimal, overview)))
+check("H8 详细版流程终端明确标注非实时（防误导为真实生成）",
+      "非实时" in overview)
 
 # ---------- 汇总 ----------
 print()

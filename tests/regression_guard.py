@@ -57,6 +57,12 @@ GUARDS = [
     ("server/discover.py", "2048 数字滑块", "2026-09-04 模板扩充在位（游戏品类）"),
     ("server/discover.py", "WHERE title=?", "幂等按标题补种（存量库能长出新模板）"),
     ("public/discover.html", "playable", "可试玩角标（发现页做细）"),
+    # 2026-09-05 双版本首页（简约版/详细版）
+    ("public/overview.html", "member-card", "详细版四位 AI 团队成员卡在位"),
+    ("public/index.html", 'id="idea"', "简约版想法输入框在位"),
+    ("public/index.html", 'action="./studio.html"', "简约版表单 GET 提交 Studio"),
+    ("public/index.html", 'href="./overview.html"', "简约版 → 详细版切换链接"),
+    ("public/overview.html", 'href="./index.html"', "详细版 → 简约版返回链接"),
 ]
 for path, needle, why in GUARDS:
     full = os.path.join(ROOT, path)

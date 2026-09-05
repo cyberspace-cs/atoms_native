@@ -90,7 +90,19 @@ def check(name, cond, detail=""):
         FAILS.append(name)
 
 
+def page_status(path):
+    """静态页 HTTP 状态（Lighthouse http-status-code 审计的离线复刻）。"""
+    try:
+        with urllib.request.urlopen(BASE + path, timeout=30) as r:
+            return r.status
+    except urllib.error.HTTPError as e:
+        return e.code
+
+
 def main():
+    for path in ("/", "/index.html", "/overview.html"):
+        check(f"static page 200: {path}", page_status(path) == 200)
+
     uname = "ci_" + "".join(random.choices(string.ascii_lowercase, k=8))
     pw = "pw_" + "".join(random.choices(string.digits, k=6))
     u = call("POST", "/api/auth/register", {"username": uname, "password": pw})

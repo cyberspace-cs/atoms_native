@@ -24,3 +24,18 @@
 ## 本轮结果
 
 `python scripts/ci_gate.py` 完整退出 0：56 个原有单测、22 个核心契约测试、39 项前端接线、5 个 SSE 测试、27 项 E2E、23 项 UI 守护，以及新增双版本浏览器旅程通过。离线评测 47 个用例各运行 2 次，真实 LLM 调用为 0。复查了简约版桌面/手机与详细版截图。未部署。
+
+## 测试补全（2026-09-05 第二轮，带来源证据）
+
+用户指出"测试一般不够全"。调研同类实践后按零依赖原则补全（不引入 axe 等新依赖）：
+
+1. **SEO/meta 契约**：两版 title、meta description（≥20 字符且互不相同）、viewport、lang 逐一断言。依据 Lighthouse SEO 审计的二元检查项（document-title / meta-description / viewport / http-status-code）。
+   来源：https://unlighthouse.dev/learn-lighthouse/seo 、https://www.perfmasters.com/learn/seo
+2. **a11y 结构性断言**：每页恰好一个 h1、无空文本链接、跳转链接（skip link）Tab 后可聚焦想法输入框、表单 label 关联。依据 WebAIM/Deque 研究结论——自动化 a11y 整体仅覆盖 30-57%，但 lang/title/label/结构类检查正是其可靠子集，适合 CI 回归。
+   来源：https://www.davidmello.com/software-testing/test-automation/playwright-accessibility-testing-axe-lighthouse-limitations
+3. **网络/控制台卫生**：静态页阶段监听 `pageerror`、`console(type=error)`、同源响应 `status>=400`（豁免 401/403 鉴权探测；HTTP 404 走 response 事件而非 requestfailed）。依据 Playwright 官方事件语义。
+   来源：https://runebook.dev/zh/docs/playwright/api/class-request/request-failure
+4. **内部链接全量可达**：两页所有同源 `.html` 链接逐一 GET 断言 200（crawlable anchors 子集）。
+5. **深度内容契约**：详细版 4 张成员卡 / 4 步工作流 / 3 条 FAQ / 4 张指标卡；打字机与流程终端动效真实输出（`#typed` 非空、`#termBody .tl` 出现）；FAQ 点击可展开。
+6. **源码守护**：frontend_checks 新增 H1-H8（overview 加入 F1 a11y CSS 守护），regression_guard 新增 5 条双版首页特征。
+7. **静态页 200**：smoke 增加 `/`、`/index.html`、`/overview.html` 状态码检查。
