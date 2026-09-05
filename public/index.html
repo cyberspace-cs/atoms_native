@@ -1,255 +1,48 @@
 <!DOCTYPE html>
-<html lang="zh">
-
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Atoms Native — 用一句话，让 AI 团队为你构建应用</title>
-  <meta name="description" content="Atoms Native：AI Agent 驱动的应用生成平台。描述你的想法，PM、架构师、工程师、评审四名智能体协作，几分钟内生成可运行、可交互的 Web 应用。">
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
-  <link rel="stylesheet" href="./landing.css">
+  <title>Atoms Native — 把想法变成应用</title>
+  <meta name="description" content="描述你的想法，让 AI 团队协作构建应用。从小游戏、效率工具或展示页面开始，在 Studio 中预览、精修和导出。">
+  <link rel="stylesheet" href="./home.css">
 </head>
-
 <body>
-
-  <!-- ================= NAV ================= -->
-  <nav class="nav">
-    <div class="nav-inner">
-      <a class="brand" href="./">
-        <span class="logo">⚛</span> Atoms <b>Native</b>
-      </a>
-      <div class="nav-links">
-        <a href="#team">AI 团队</a>
-        <a href="#workflow">工作流程</a>
-        <a href="#highlights">技术亮点</a>
-        <a href="./discover.html">发现</a>
-        <a href="./plan.html">版本历史</a>
-        <a class="nav-cta" href="./studio.html">进入 Studio →</a>
-      </div>
-    </div>
-  </nav>
-
-  <!-- ================= HERO ================= -->
-  <header class="hero">
-    <div class="glow g1"></div>
-    <div class="glow g2"></div>
-    <div class="glow g3"></div>
-    <div class="hero-inner">
-      <div class="hero-copy">
-        <div class="pill">🤖 Agentic App Platform · 多智能体应用生成</div>
-        <h1>描述你的想法<br><span class="grad">AI 团队为你构建应用</span></h1>
-        <p class="sub">一句话 → <b>PM 规划 · 架构师设计 · 工程师编码 · 评审把关</b><br>
-          几分钟内得到一个可运行、可交互、可导出的 Web 应用。</p>
-        <div class="hero-typing">
-          <span class="typing-label">试想：</span>
-          <span id="typed"></span><span class="caret"></span>
-        </div>
-        <div class="hero-cta">
-          <a class="btn primary" href="./studio.html">⚡ 免费开始构建</a>
-          <a class="btn ghost" href="#workflow">观看工作流程</a>
-        </div>
-        <div class="hero-note">无需信用卡 · 注册即用 · 无 Key 自动离线演示模式</div>
-      </div>
-
-      <div class="hero-demo">
-        <div class="term glass">
-          <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span
-              class="term-title">atoms-agent-team — live</span></div>
-          <pre id="termBody" class="term-body"></pre>
-        </div>
-      </div>
-    </div>
-
-    <div class="stats">
-      <div class="stat glass"><b>4</b><span>AI Agent 协作</span></div>
-      <div class="stat glass"><b>&lt;120s</b><span>平均生成时间</span></div>
-      <div class="stat glass"><b>100%</b><span>沙箱隔离执行</span></div>
-      <div class="stat glass"><b>0</b><span>需要编写的代码</span></div>
-    </div>
+  <a class="skip" href="#idea">跳到想法输入框</a>
+  <header class="nav">
+    <a class="brand" href="./index.html" aria-label="Atoms Native 首页"><span class="mark" aria-hidden="true">✳</span> Atoms <span>Native</span></a>
+    <nav aria-label="主导航">
+      <a href="./discover.html">发现作品</a>
+      <a class="version" href="./overview.html">详细版 ↗</a>
+      <a class="studio" href="./studio.html">进入 Studio <span aria-hidden="true">→</span></a>
+    </nav>
   </header>
-
-  <!-- ================= TEAM ================= -->
-  <section class="sec" id="team">
-    <h2>认识你的 <span class="grad">AI 团队</span></h2>
-    <p class="sec-sub">四名各司其职的智能体，像一支真正的产品团队一样协作</p>
-    <div class="team-grid">
-      <div class="member-card glass">
-        <div class="avatar">📋</div>
-        <h3>Emma</h3>
-        <div class="role">产品经理</div>
-        <p>把你的模糊想法变成结构化的需求规格：功能清单、页面结构、交互细节。</p>
+  <main>
+    <section class="hero" aria-labelledby="title">
+      <p class="eyebrow"><span class="spark" aria-hidden="true">✦</span> 一个想法，一支 AI 团队</p>
+      <h1 id="title">把你的想法，<br>变成<span class="accent">能用的应用。</span></h1>
+      <p class="sub">从一个小工具到一个新点子。用日常语言描述，在对话中慢慢完善。</p>
+      <form action="./studio.html" method="get" class="composer">
+        <label for="idea">今天，你想做点什么？</label>
+        <textarea id="idea" name="idea" required maxlength="4000" rows="3" placeholder="例如：做一个每周读书计划，能记录进度、写读后感…" aria-describedby="input-help"></textarea>
+        <div class="composer-bottom"><span id="input-help">描述用途、功能和喜欢的风格</span><button type="submit">开始构建 <span aria-hidden="true">↗</span></button></div>
+      </form>
+      <div class="ideas" aria-label="快捷想法">
+        <span>从这里开始</span>
+        <a href="./studio.html?idea=制作一个番茄钟，支持开始暂停、休息提醒和今日专注次数统计">◷ 专注工具</a>
+        <a href="./studio.html?idea=制作一个个人作品集，包含自我介绍、项目展示和联系信息，简约风格">▧ 个人主页</a>
+        <a href="./studio.html?idea=制作一个2048小游戏，支持键盘和触摸操作、分数记录和重新开始">♧ 小游戏</a>
+        <a href="./studio.html?idea=制作一个活动报名页面，展示日程、地点和报名表单，提交后在本地保存">↗ 活动页面</a>
       </div>
-      <div class="member-card glass">
-        <div class="avatar">🏗️</div>
-        <h3>Bob</h3>
-        <div class="role">架构师</div>
-        <p>设计应用架构与数据模型，规划组件划分与状态管理方案。</p>
-      </div>
-      <div class="member-card glass">
-        <div class="avatar">⚙️</div>
-        <h3>Alex</h3>
-        <div class="role">全栈工程师</div>
-        <p>亲手写出完整的单文件 Web 应用：HTML + CSS + JS，即写即跑。</p>
-      </div>
-      <div class="member-card glass">
-        <div class="avatar">🔍</div>
-        <h3>Mike</h3>
-        <div class="role">评审工程师</div>
-        <p>审查代码质量与安全边界，自动修复问题后交付，并给出安全评分。</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= WORKFLOW ================= -->
-  <section class="sec alt" id="workflow">
-    <h2>从想法到应用，<span class="grad">四步直达</span></h2>
-    <p class="sec-sub">全程可视化：每个智能体在做什么，你都能实时看到</p>
-    <div class="flow">
-      <div class="step glass">
-        <div class="num">01</div>
-        <div class="ic">💬</div>
-        <h3>描述想法</h3>
-        <p>用自然语言说出你想要的应用，或从示例模板一键开始。</p>
-      </div>
-      <div class="arrow">→</div>
-      <div class="step glass">
-        <div class="num">02</div>
-        <div class="ic">🤝</div>
-        <h3>智能体协作</h3>
-        <p>PM → 架构师 → 工程师 → 评审，流水线式接力生成。</p>
-      </div>
-      <div class="arrow">→</div>
-      <div class="step glass">
-        <div class="num">03</div>
-        <div class="ic">📱</div>
-        <h3>实时预览</h3>
-        <p>应用在沙箱中即时渲染，桌面 / 平板 / 手机三端可切换。</p>
-      </div>
-      <div class="arrow">→</div>
-      <div class="step glass">
-        <div class="num">04</div>
-        <div class="ic">🔁</div>
-        <h3>对话精修</h3>
-        <p>"把主色改成绿色"——聊着天改应用，每个版本可回滚。</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= HIGHLIGHTS ================= -->
-  <section class="sec" id="highlights">
-    <h2>为 <span class="grad">工程严谨性</span> 而设计</h2>
-    <p class="sec-sub">不只是演示——安全、评测、可观测性贯穿平台始终</p>
-    <div class="hl-grid">
-      <div class="hl glass">
-        <div class="ic">🔐</div>
-        <h3>Green / Red 安全边界</h3>
-        <p>生成代码只在浏览器 sandbox iframe 中运行；服务端永不 eval / exec；鉴权与密钥管理由人工边界守护。</p>
-      </div>
-      <div class="hl glass">
-        <div class="ic">🛡️</div>
-        <h3>OWASP LLM Top 10 扫描</h3>
-        <p>对生成物做提示注入 / XSS / 系统提示泄露等自动扫描，逐版本给出 0-100 安全评分。</p>
-      </div>
-      <div class="hl glass">
-        <div class="ic">📏</div>
-        <h3>SDD 规范驱动开发</h3>
-        <p>Spec → Design → Tasks 全程文档化；评估集 + pass@k 真实跑分回归，拒绝"感觉良好"。</p>
-      </div>
-      <div class="hl glass">
-        <div class="ic">⚡</div>
-        <h3>离线降级韧性</h3>
-        <p>无 LLM Key 时自动切换离线模板模式，全链路依旧可跑通——演示永不掉链子。</p>
-      </div>
-      <div class="hl glass">
-        <div class="ic">🚦</div>
-        <h3>分布式限流 + 可观测</h3>
-        <p>Redis+Lua 令牌桶多租户限流；OpenTelemetry 追踪、P95 延迟指标、结构化审计日志。</p>
-      </div>
-      <div class="hl glass">
-        <div class="ic">📦</div>
-        <h3>版本管理与导出</h3>
-        <p>每次生成/精修都是带模型标注的版本，支持对比、回滚，一键导出单文件 HTML。</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= FINAL CTA ================= -->
-  <section class="cta-sec">
-    <div class="glow g1"></div>
-    <div class="glow g2"></div>
-    <h2>准备好让你的想法<span class="grad">跑起来</span>了吗？</h2>
-    <p class="sec-sub">注册一个账号，60 秒后你就有第一个应用。</p>
-    <a class="btn primary big" href="./studio.html">⚛ 进入 Atoms Studio</a>
-  </section>
-
-  <footer class="foot">
-    <div>⚛ Atoms Native — AI Agent 驱动的应用生成平台（笔试 Demo）</div>
-    <div class="tech">FastAPI · SQLite · 原生 JS 零构建 · 沙箱隔离 · 多模型赛马</div>
-  </footer>
-
-  <script>
-    (() => {
-      // ---- typewriter ----
-      const ideas = [
-        "一个奶茶店点单系统，支持购物车与订单管理",
-        "一个团队每日打卡工具，带统计图表",
-        "一个五子棋小游戏，可以人机对战",
-        "一个可视化数据仪表盘，含卡片指标与图表",
-        "一个活动报名落地页，带表单与倒计时"
-      ];
-      const typedEl = document.getElementById("typed");
-      let ii = 0, ci = 0, deleting = false;
-      function tick() {
-        const cur = ideas[ii];
-        typedEl.textContent = cur.slice(0, ci);
-        if (!deleting) {
-          if (ci < cur.length) { ci++; setTimeout(tick, 60); }
-          else { deleting = true; setTimeout(tick, 1800); }
-        } else {
-          if (ci > 0) { ci--; setTimeout(tick, 24); }
-          else { deleting = false; ii = (ii + 1) % ideas.length; setTimeout(tick, 400); }
-        }
-      }
-      tick();
-
-      // ---- agent terminal demo ----
-      const lines = [
-        ["pm", "📋 Emma（PM）：解析需求，生成功能规格…"],
-        ["pm-ok", "   ✓ 规格：3 个页面 · 8 项功能 · 交互清单"],
-        ["arch", "🏗️ Bob（架构师）：设计数据模型与组件树…"],
-        ["arch-ok", "   ✓ 架构：App Shell + 4 组件 + localStorage 持久化"],
-        ["eng", "⚙️ Alex（工程师）：编写单文件应用…"],
-        ["eng-ok", "   ✓ 生成 486 行 HTML/CSS/JS，自包含可运行"],
-        ["rev", "🔍 Mike（评审）：代码审查 + 安全扫描…"],
-        ["rev-ok", "   ✓ 修复 1 处 XSS 风险 · 安全评分 92/100"],
-        ["done", "🚀 应用已就绪，正在沙箱中渲染预览…"]
-      ];
-      const term = document.getElementById("termBody");
-      let li = 0;
-      function nextLine() {
-        if (li >= lines.length) {
-          setTimeout(() => { term.textContent = ""; li = 0; nextLine(); }, 3200);
-          return;
-        }
-        const [cls, text] = lines[li];
-        const div = document.createElement("div");
-        div.className = "tl " + cls;
-        div.textContent = text;
-        term.appendChild(div);
-        term.scrollTop = term.scrollHeight;
-        li++;
-        setTimeout(nextLine, cls.endsWith("-ok") ? 500 : 900);
-      }
-      nextLine();
-
-      // ---- reveal on scroll ----
-      const io = new IntersectionObserver((es) => {
-        es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
-      }, { threshold: 0.12 });
-      document.querySelectorAll(".sec .glass").forEach((el) => { el.classList.add("reveal"); io.observe(el); });
-    })();
-  </script>
+      <p class="note">在 Studio 登录后继续 · 离线演示会明确标注</p>
+    </section>
+    <section class="path" aria-label="构建过程">
+      <div><span class="step">01</span><h2>说出想法</h2><p>从一句话开始。</p></div>
+      <div><span class="step">02</span><h2>看见作品</h2><p>团队协作，预览成果。</p></div>
+      <div><span class="step">03</span><h2>继续完善</h2><p>对话精修，回滚或导出。</p></div>
+      <a href="./overview.html">了解完整流程 <span aria-hidden="true">↗</span></a>
+    </section>
+  </main>
+  <footer><span>Atoms Native · 让想法有一个开始</span><div><a href="./overview.html">详细版</a><a href="./plan.html">迭代记录</a></div></footer>
 </body>
-
 </html>

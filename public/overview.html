@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atoms Native — 详细版 · 了解产品</title>
+  <meta name="description" content="Atoms Native：AI Agent 驱动的应用生成平台。描述你的想法，PM、架构师、工程师、评审四名智能体协作，几分钟内生成可运行、可交互的 Web 应用。">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
+  <link rel="stylesheet" href="./landing.css">
+  <link rel="stylesheet" href="./overview.css">
+</head>
+
+<body>
+
+  <!-- ================= NAV ================= -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="./">
+        <span class="logo">⚛</span> Atoms <b>Native</b>
+      </a>
+      <div class="nav-links">
+        <a class="version-link" href="./index.html">简约版 ↗</a>
+        <a href="#team">AI 团队</a>
+        <a href="#workflow">工作流程</a>
+        <a href="#highlights">技术亮点</a>
+        <a href="./discover.html">发现</a>
+        <a href="./plan.html">版本历史</a>
+        <a class="nav-cta" href="./studio.html">进入 Studio →</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <div class="glow g3"></div>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <div class="pill">🤖 Agentic App Platform · 多智能体应用生成</div>
+        <h1>描述你的想法<br><span class="grad">AI 团队为你构建应用</span></h1>
+        <p class="sub">一句话 → <b>PM 规划 · 架构师设计 · 工程师编码 · 评审把关</b><br>
+          几分钟内得到一个可运行、可交互、可导出的 Web 应用。</p>
+        <div class="hero-typing">
+          <span class="typing-label">试想：</span>
+          <span id="typed"></span><span class="caret"></span>
+        </div>
+        <div class="hero-cta">
+          <a class="btn primary" href="./studio.html">⚡ 开始构建</a>
+          <a class="btn ghost" href="#workflow">观看工作流程</a>
+        </div>
+        <div class="hero-note">注册后开始构建 · 离线演示会明确标注</div>
+      </div>
+
+      <div class="hero-demo">
+        <div class="term glass">
+          <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span
+              class="term-title">流程示意 · 非实时生成</span></div>
+          <pre id="termBody" class="term-body"></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat glass"><b>4</b><span>AI Agent 协作</span></div>
+      <div class="stat glass"><b>HTML</b><span>可独立导出</span></div>
+      <div class="stat glass"><b>版本链</b><span>支持回滚</span></div>
+      <div class="stat glass"><b>0</b><span>需要编写的代码</span></div>
+    </div>
+  </header>
+
+  <!-- ================= TEAM ================= -->
+  <section class="sec" id="team">
+    <h2>认识你的 <span class="grad">AI 团队</span></h2>
+    <p class="sec-sub">四名各司其职的智能体，像一支真正的产品团队一样协作</p>
+    <div class="team-grid">
+      <div class="member-card glass">
+        <div class="avatar">📋</div>
+        <h3>Emma</h3>
+        <div class="role">产品经理</div>
+        <p>把你的模糊想法变成结构化的需求规格：功能清单、页面结构、交互细节。</p>
+      </div>
+      <div class="member-card glass">
+        <div class="avatar">🏗️</div>
+        <h3>Bob</h3>
+        <div class="role">架构师</div>
+        <p>设计应用架构与数据模型，规划组件划分与状态管理方案。</p>
+      </div>
+      <div class="member-card glass">
+        <div class="avatar">⚙️</div>
+        <h3>Alex</h3>
+        <div class="role">全栈工程师</div>
+        <p>亲手写出完整的单文件 Web 应用：HTML + CSS + JS，即写即跑。</p>
+      </div>
+      <div class="member-card glass">
+        <div class="avatar">🔍</div>
+        <h3>Mike</h3>
+        <div class="role">评审工程师</div>
+        <p>审查代码质量；需要修复时尝试一轮并复审。评审通过后保存，失败精修保留上一版。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= WORKFLOW ================= -->
+  <section class="sec alt" id="workflow">
+    <h2>从想法到应用，<span class="grad">四步直达</span></h2>
+    <p class="sec-sub">全程可视化：每个智能体在做什么，你都能实时看到</p>
+    <div class="flow">
+      <div class="step glass">
+        <div class="num">01</div>
+        <div class="ic">💬</div>
+        <h3>描述想法</h3>
+        <p>用自然语言说出你想要的应用，或从示例模板一键开始。</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step glass">
+        <div class="num">02</div>
+        <div class="ic">🤝</div>
+        <h3>智能体协作</h3>
+        <p>PM → 架构师 → 工程师 → 评审，流水线式接力生成。</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step glass">
+        <div class="num">03</div>
+        <div class="ic">📱</div>
+        <h3>实时预览</h3>
+        <p>应用在沙箱中即时渲染，桌面 / 平板 / 手机三端可切换。</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step glass">
+        <div class="num">04</div>
+        <div class="ic">🔁</div>
+        <h3>对话精修</h3>
+        <p>"把主色改成绿色"——聊着天改应用，每个版本可回滚。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HIGHLIGHTS ================= -->
+  <section class="sec" id="highlights">
+    <h2>为 <span class="grad">工程严谨性</span> 而设计</h2>
+    <p class="sec-sub">不只是演示——安全、评测、可观测性贯穿平台始终</p>
+    <div class="hl-grid">
+      <div class="hl glass">
+        <div class="ic">🔐</div>
+        <h3>Green / Red 安全边界</h3>
+        <p>生成代码只在浏览器 sandbox iframe 中运行；服务端永不 eval / exec；鉴权与密钥管理由人工边界守护。</p>
+      </div>
+      <div class="hl glass">
+        <div class="ic">🛡️</div>
+        <h3>OWASP LLM Top 10 扫描</h3>
+        <p>对生成物做提示注入 / XSS / 系统提示泄露等自动扫描，逐版本给出 0-100 安全评分。</p>
+      </div>
+      <div class="hl glass">
+        <div class="ic">📏</div>
+        <h3>SDD 规范驱动开发</h3>
+        <p>Spec → Design → Tasks 全程文档化；评估集 + pass@k 真实跑分回归，拒绝"感觉良好"。</p>
+      </div>
+      <div class="hl glass">
+        <div class="ic">⚡</div>
+        <h3>离线降级韧性</h3>
+        <p>模型不可用时可体验明确标注的离线模板；离线精修会保留原样，真实调用失败会显示原因。</p>
+      </div>
+      <div class="hl glass">
+        <div class="ic">🚦</div>
+        <h3>分布式限流 + 可观测</h3>
+        <p>Redis+Lua 令牌桶多租户限流；OpenTelemetry 追踪、P95 延迟指标、结构化审计日志。</p>
+      </div>
+      <div class="hl glass">
+        <div class="ic">📦</div>
+        <h3>版本管理与导出</h3>
+        <p>成功交付保存新版本，失败或无变化的精修保留上一版。支持回滚，一键导出单文件 HTML。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec faq">
+    <h2>常见问题</h2>
+    <details><summary>两版页面有什么区别？</summary><p>简约版便于直接输入想法；详细版介绍完整流程。两版都进入同一个 Studio，项目和账号通用。</p></details>
+    <details><summary>适合做什么？</summary><p>轻量工具、小游戏、展示页面和交互原型。生成物为单文件 HTML，支付和外部服务需要额外集成。</p></details>
+    <details><summary>修改失败会丢失作品吗？</summary><p>失败或无变化的精修保留上一版；已保存的版本可以回滚，也可以导出 HTML。</p></details>
+  </section>
+  <!-- ================= FINAL CTA ================= -->
+  <section class="cta-sec">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <h2>准备好让你的想法<span class="grad">跑起来</span>了吗？</h2>
+    <p class="sec-sub">从一个小想法开始，预览效果，再用对话逐步完善。</p>
+    <a class="btn primary big" href="./studio.html">⚛ 进入 Atoms Studio</a>
+  </section>
+
+  <footer class="foot">
+    <div>⚛ Atoms Native — AI Agent 驱动的应用生成平台（笔试 Demo）</div>
+    <div class="tech">FastAPI · SQLite · 原生 JS 零构建 · 沙箱隔离 · 对话精修</div>
+  </footer>
+
+  <script>
+    (() => {
+      // ---- typewriter ----
+      const ideas = [
+        "一个奶茶店点单系统，支持购物车与订单管理",
+        "一个团队每日打卡工具，带统计图表",
+        "一个五子棋小游戏，可以人机对战",
+        "一个可视化数据仪表盘，含卡片指标与图表",
+        "一个活动报名落地页，带表单与倒计时"
+      ];
+      const typedEl = document.getElementById("typed");
+      let ii = 0, ci = 0, deleting = false;
+      function tick() {
+        const cur = ideas[ii];
+        typedEl.textContent = cur.slice(0, ci);
+        if (!deleting) {
+          if (ci < cur.length) { ci++; setTimeout(tick, 60); }
+          else { deleting = true; setTimeout(tick, 1800); }
+        } else {
+          if (ci > 0) { ci--; setTimeout(tick, 24); }
+          else { deleting = false; ii = (ii + 1) % ideas.length; setTimeout(tick, 400); }
+        }
+      }
+      tick();
+
+      // ---- agent terminal demo ----
+      const lines = [
+        ["pm", "📋 Emma（PM）：解析需求，生成功能规格…"],
+        ["pm-ok", "   ✓ 规格：3 个页面 · 8 项功能 · 交互清单"],
+        ["arch", "🏗️ Bob（架构师）：设计数据模型与组件树…"],
+        ["arch-ok", "   ✓ 架构：App Shell + 4 组件 + localStorage 持久化"],
+        ["eng", "⚙️ Alex（工程师）：编写单文件应用…"],
+        ["eng-ok", "   ✓ 生成 486 行 HTML/CSS/JS，自包含可运行"],
+        ["rev", "🔍 Mike（评审）：代码审查 + 安全扫描…"],
+        ["rev-ok", "   ✓ 修复 1 处 XSS 风险 · 安全评分 92/100"],
+        ["done", "🚀 应用已就绪，正在沙箱中渲染预览…"]
+      ];
+      const term = document.getElementById("termBody");
+      let li = 0;
+      function nextLine() {
+        if (li >= lines.length) {
+          setTimeout(() => { term.textContent = ""; li = 0; nextLine(); }, 3200);
+          return;
+        }
+        const [cls, text] = lines[li];
+        const div = document.createElement("div");
+        div.className = "tl " + cls;
+        div.textContent = text;
+        term.appendChild(div);
+        term.scrollTop = term.scrollHeight;
+        li++;
+        setTimeout(nextLine, cls.endsWith("-ok") ? 500 : 900);
+      }
+      nextLine();
+
+      // ---- reveal on scroll ----
+      const io = new IntersectionObserver((es) => {
+        es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+      }, { threshold: 0.12 });
+      document.querySelectorAll(".sec .glass").forEach((el) => { el.classList.add("reveal"); io.observe(el); });
+    })();
+  </script>
+</body>
+
+</html>

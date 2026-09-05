@@ -80,6 +80,7 @@ def main():
                 for name, command in [
                     ('HTTP smoke', [py, 'tests/smoke.py']),
                     ('Browser journeys', [py, 'tests/e2e_journeys.py']),
+                    ('Homepage editions', [py, 'tests/homepage_journeys.py']),
                     ('UI loop', [py, 'tests/ui_loop.py']),
                     ('Offline eval harness', [py, 'server/evals/runner.py', '--runs', '2', '--model', 'mock_ci_unavailable', '--report', report]),
                     ('Offline eval gate', [py, 'scripts/eval_gate.py', '--expect-mock', '--report', report]),
