@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>作品集 · Atoms Native</title>
+  <script>document.documentElement.dataset.theme = (function () { try { return localStorage.getItem("an_theme") || "light" } catch (e) { return "light" } })();</script>
   <style>
     :root {
       --bg: #070b14;
@@ -269,7 +270,26 @@
         transition-duration: .01ms !important
       }
     }
+
+    /* ---- 浅色主题（an_theme=light，全站默认） ---- */
+    html[data-theme="light"] {
+      color-scheme: light
+    }
+
+    html[data-theme="light"] {
+      --bg: #fafaf7;
+      --bg2: #f1f2ee;
+      --card: #fff;
+      --line: #e4e5df;
+      --text: #202222;
+      --dim: #626561;
+      --cyan: #4659df;
+      --violet: #7560cb;
+      --grad: linear-gradient(90deg, #4659df, #7560cb)
+    }
   </style>
+  <link rel="stylesheet" href="./theme.css">
+  <script src="./theme.js" defer></script>
 </head>
 
 <body>
@@ -297,6 +317,8 @@
           <div class="l">被 Remix</div>
         </div>
       </div>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换深色模式"
+        style="position:fixed;top:18px;right:20px;z-index:60">🌙</button>
     </header>
 
     <div class="grid" id="grid"></div>

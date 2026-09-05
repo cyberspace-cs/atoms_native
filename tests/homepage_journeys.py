@@ -129,6 +129,28 @@ with sync_playwright() as p:
     plain.get_by_role('button', name='开始构建').click()
     assert parse_qs(urlparse(plain.url).query)['idea'] == [idea]
     context.close()
+
+    # ---------- 5. 全站双主题绑定（2026-09-05）：切换→跨页→刷新→切回 ----------
+    page.goto(BASE + '/')
+    page.evaluate('localStorage.removeItem("an_theme")')
+    page.reload()
+    assert page.evaluate('document.documentElement.dataset.theme') == 'light', '未选择时默认浅色'
+    assert page.evaluate('localStorage.getItem("an_theme")') is None, '默认态不应写入 localStorage'
+    page.click('#themeToggle')
+    assert page.evaluate('document.documentElement.dataset.theme') == 'dark', '点击后应变深色'
+    assert page.evaluate('localStorage.getItem("an_theme")') == 'dark', '选择应持久化到 localStorage'
+    page.get_by_role('link', name='进入 Studio').click()  # 跨页：Studio 必须保持深色（绑定核心）
+    page.wait_for_load_state()
+    assert page.evaluate('document.documentElement.dataset.theme') == 'dark', '跨页颜色模式绑定失败'
+    page.reload()
+    assert page.evaluate('document.documentElement.dataset.theme') == 'dark', '刷新后应保持深色'
+    page.click('#themeToggle')
+    assert page.evaluate('document.documentElement.dataset.theme') == 'light', '切回应回到浅色'
+    assert page.evaluate('localStorage.getItem("an_theme")') == 'light'
+    page.evaluate('localStorage.removeItem("an_theme")')  # 还原默认态，不影响后续浏览器会话
+    assert not console_errors, f'主题旅程控制台报错: {console_errors}'
+    assert not bad_responses, f'主题旅程 4xx/5xx: {bad_responses}'
+
     assert not errors, errors
     browser.close()
     print('PASS: edition navigation, validation, idea handoff, shortcuts, no-JS form, 3 screen widths.')

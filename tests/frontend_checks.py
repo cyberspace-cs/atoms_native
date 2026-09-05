@@ -224,6 +224,39 @@ check("H7 两版均为相对路径资源（子路径部署安全，无绝对 /ap
 check("H8 详细版流程终端明确标注非实时（防误导为真实生成）",
       "非实时" in overview)
 
+# ---------- I. 全站双主题绑定（2026-09-05，docs/superpowers/specs/2026-09-05-theme-light-dark-design.md） ----------
+# 证据：跨页颜色一致性是「简约首页(浅)→Studio(深)不突兀」的核心诉求；
+# 防闪烁内联脚本必须先于 CSS 渲染执行，否则深色用户每次跨页都会白闪一次
+THEME_PAGES = ("index", "overview", "discover", "studio", "plan", "portfolio", "admin", "team")
+for _page in THEME_PAGES:
+    _f = PUBLIC / f"{_page}.html"
+    _t = _f.read_text(encoding="utf-8")
+    check(f"I1 {_page}.html 防闪烁内联脚本在位（读 an_theme 设 data-theme）",
+          "document.documentElement.dataset.theme" in _t
+          and 'localStorage.getItem("an_theme")' in _t)
+    check(f"I2 {_page}.html 引入 theme.css + theme.js",
+          "./theme.css" in _t and "./theme.js" in _t)
+    check(f"I3 {_page}.html 有主题切换按钮", 'id="themeToggle"' in _t)
+
+check("I4 theme.css 提供切换按钮样式（.theme-toggle）",
+      (PUBLIC / "theme.css").exists()
+      and ".theme-toggle" in (PUBLIC / "theme.css").read_text(encoding="utf-8"))
+check("I5 theme.js 切换并持久化 an_theme",
+      "an_theme" in (PUBLIC / "theme.js").read_text(encoding="utf-8"))
+
+home_css = (PUBLIC / "home.css").read_text(encoding="utf-8")
+overview_css = (PUBLIC / "overview.css").read_text(encoding="utf-8")
+styles_css = (PUBLIC / "styles.css").read_text(encoding="utf-8")
+check("I6 home.css（浅色默认）含深色覆盖块", 'html[data-theme="dark"]' in home_css)
+check("I7 overview.css（浅色默认）含深色回落块", 'html[data-theme="dark"]' in overview_css)
+check("I8 styles.css（深色默认）含浅色覆盖块", 'html[data-theme="light"]' in styles_css)
+for _page in ("discover", "plan", "portfolio", "admin"):
+    _t = (PUBLIC / f"{_page}.html").read_text(encoding="utf-8")
+    check(f"I9 {_page}.html 内联浅色覆盖块", 'html[data-theme="light"]' in _t)
+_dark_new = home_css[home_css.find("data-theme"):] + overview_css[overview_css.find("data-theme"):]
+check("I10 新增深色块未使用低对比灰 #475569/#64748b（F3 同规）",
+      "#475569" not in _dark_new and "#64748b" not in _dark_new)
+
 # ---------- 汇总 ----------
 print()
 if FAILS:

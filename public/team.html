@@ -5,9 +5,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Atoms Native · AI 团队 — 四位智能体</title>
+  <script>document.documentElement.dataset.theme = (function () { try { return localStorage.getItem("an_theme") || "light" } catch (e) { return "light" } })();</script>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./theme.css">
+  <script src="./theme.js" defer></script>
   <style>
     body {
       min-height: 100vh;
@@ -146,6 +149,8 @@
 </head>
 
 <body>
+  <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换深色模式"
+    style="position:fixed;top:18px;right:20px;z-index:60">🌙</button>
   <div class="wrap">
     <a class="back" href="./studio.html">← 返回工作台</a>
     <h1>🤖 AI 开发小队 <b>四位智能体</b></h1>

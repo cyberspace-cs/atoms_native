@@ -6,10 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Atoms Native — 详细版 · 了解产品</title>
   <meta name="description" content="Atoms Native：AI Agent 驱动的应用生成平台。描述你的想法，PM、架构师、工程师、评审四名智能体协作，几分钟内生成可运行、可交互的 Web 应用。">
+  <script>document.documentElement.dataset.theme = (function () { try { return localStorage.getItem("an_theme") || "light" } catch (e) { return "light" } })();</script>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
   <link rel="stylesheet" href="./landing.css">
   <link rel="stylesheet" href="./overview.css">
+  <link rel="stylesheet" href="./theme.css">
+  <script src="./theme.js" defer></script>
 </head>
 
 <body>
@@ -28,6 +31,7 @@
         <a href="./discover.html">发现</a>
         <a href="./plan.html">版本历史</a>
         <a class="nav-cta" href="./studio.html">进入 Studio →</a>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换深色模式">🌙</button>
       </div>
     </div>
   </nav>
@@ -178,9 +182,18 @@
 
   <section class="sec faq">
     <h2>常见问题</h2>
-    <details><summary>两版页面有什么区别？</summary><p>简约版便于直接输入想法；详细版介绍完整流程。两版都进入同一个 Studio，项目和账号通用。</p></details>
-    <details><summary>适合做什么？</summary><p>轻量工具、小游戏、展示页面和交互原型。生成物为单文件 HTML，支付和外部服务需要额外集成。</p></details>
-    <details><summary>修改失败会丢失作品吗？</summary><p>失败或无变化的精修保留上一版；已保存的版本可以回滚，也可以导出 HTML。</p></details>
+    <details>
+      <summary>两版页面有什么区别？</summary>
+      <p>简约版便于直接输入想法；详细版介绍完整流程。两版都进入同一个 Studio，项目和账号通用。</p>
+    </details>
+    <details>
+      <summary>适合做什么？</summary>
+      <p>轻量工具、小游戏、展示页面和交互原型。生成物为单文件 HTML，支付和外部服务需要额外集成。</p>
+    </details>
+    <details>
+      <summary>修改失败会丢失作品吗？</summary>
+      <p>失败或无变化的精修保留上一版；已保存的版本可以回滚，也可以导出 HTML。</p>
+    </details>
   </section>
   <!-- ================= FINAL CTA ================= -->
   <section class="cta-sec">

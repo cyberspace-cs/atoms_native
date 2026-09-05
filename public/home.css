@@ -6,3 +6,13 @@ main{max-width:1120px;margin:auto}.hero{text-align:center;padding:72px 24px 58px
 .path{margin:0 36px 54px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:27px 0;display:grid;grid-template-columns:repeat(3,1fr) auto;gap:22px;align-items:center}.step{font:11px monospace;color:var(--accent);letter-spacing:1px}.path h2{font-size:14px;margin:8px 0 4px;font-weight:600}.path p{font-size:12px;color:var(--muted);margin:0}.path>a{font-size:12px;color:var(--muted)}footer{max-width:1280px;margin:auto;padding:0 44px 24px;display:flex;justify-content:space-between;gap:18px;font-size:11px;color:var(--muted)}footer div{display:flex;gap:20px}
 @media(max-width:650px){.nav{padding:18px 20px;gap:10px}.brand{font-size:19px}.brand>span:last-child{display:none}nav{gap:12px;font-size:12px}nav>a:first-child{display:none}.studio{padding:9px 10px}.hero{padding:44px 20px 36px}h1{letter-spacing:-1px}.sub{font-size:13px;max-width:290px;margin:0 auto 26px}.composer{padding:18px 16px 14px}.composer-bottom>span{max-width:128px;font-size:11px}.ideas>span{width:100%;margin:0 0 4px}.path{margin:0 20px 32px;grid-template-columns:repeat(3,1fr);gap:12px}.path>a{grid-column:1/-1;margin-top:8px}.path p{line-height:1.7}footer{padding:0 20px 22px;flex-wrap:wrap}.eyebrow{font-size:11px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+/* ---- 深色主题（an_theme=dark；全站默认浅色，切换后 localStorage 全站绑定） ---- */
+html[data-theme="dark"]{color-scheme:dark;--ink:#e8e9e4;--muted:#9aa096;--accent:#8b9dff;--line:#2a2c28;--paper:#101312}
+html[data-theme="dark"] .brand>span:last-child{border-left-color:#2a2c28}
+html[data-theme="dark"] .studio{background:#171a19}
+html[data-theme="dark"] .composer{border-color:#2a2c28;background:#171a19;box-shadow:0 8px 35px rgba(0,0,0,.45)}
+html[data-theme="dark"] textarea::placeholder{color:#8a8f86}
+html[data-theme="dark"] button{color:#0d1017}
+html[data-theme="dark"] button:hover{background:#a3b1ff}
+html[data-theme="dark"] .ideas a{background:#171a19}
+html[data-theme="dark"] .skip{background:#171a19}

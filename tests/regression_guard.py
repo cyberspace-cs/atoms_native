@@ -63,6 +63,13 @@ GUARDS = [
     ("public/index.html", 'action="./studio.html"', "简约版表单 GET 提交 Studio"),
     ("public/index.html", 'href="./overview.html"', "简约版 → 详细版切换链接"),
     ("public/overview.html", 'href="./index.html"', "详细版 → 简约版返回链接"),
+    # 2026-09-05 全站双主题绑定（浅色默认，localStorage 跨页一致）
+    ("public/theme.js", "an_theme", "主题绑定持久化逻辑在位"),
+    ("public/theme.js", "themeToggle", "主题切换按钮接线在位"),
+    ("public/theme.css", ".theme-toggle", "切换按钮样式在位"),
+    ("public/index.html", 'localStorage.getItem("an_theme")', "首页防闪烁脚本在位"),
+    ("public/home.css", 'html[data-theme="dark"]', "简约版深色覆盖块在位"),
+    ("public/styles.css", 'html[data-theme="light"]', "Studio 浅色覆盖块在位"),
 ]
 for path, needle, why in GUARDS:
     full = os.path.join(ROOT, path)

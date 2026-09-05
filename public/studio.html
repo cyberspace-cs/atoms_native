@@ -5,13 +5,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Atoms Native · Studio — AI 应用生成工作台</title>
+  <script>document.documentElement.dataset.theme = (function () { try { return localStorage.getItem("an_theme") || "light" } catch (e) { return "light" } })();</script>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%9B%EF%B8%8F</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./theme.css">
+  <script src="./theme.js" defer></script>
 </head>
 
 <body>
+  <!-- 主题切换：固定右下角，登录屏（#auth）与工作台（#main）都可见；避开右上退出按钮 -->
+  <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换深色模式" style="position:fixed;bottom:18px;right:18px;z-index:60">🌙</button>
   <div id="app">
     <!-- ============ AUTH ============ -->
     <section id="auth" class="auth">

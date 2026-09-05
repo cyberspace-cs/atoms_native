@@ -3,3 +3,19 @@
 body{background:var(--bg)}b{color:var(--text)}.nav{background:#fafaf7f2}.nav-links a:hover{color:var(--cyan)}.nav-cta,.btn.primary{background:#4659df;color:white!important;box-shadow:none}.glow{display:none}.hero{padding-top:70px}.pill{color:var(--cyan);border-color:#dadff5;background:#eef0fc}.glass{backdrop-filter:none}.term{box-shadow:0 12px 32px #22222208}.term-bar{background:#f1f2ee}.term-body{color:#333}.tl.pm,.tl.arch,.tl.eng,.tl.rev{color:#333}.tl.pm-ok,.tl.arch-ok,.tl.eng-ok,.tl.rev-ok{color:#287345}.hero-note,.foot,.foot .tech{color:var(--dim)}.btn.ghost{background:white}.step .num{color:#757a70}.sec{padding-top:56px}.sec h2{font-size:30px}.sec-sub{margin-bottom:30px}.stats{margin-top:36px}.stat b{font-size:25px}.cta-sec{padding:70px 24px}.faq details{border-bottom:1px solid var(--line);padding:20px 0}.faq h2{margin-bottom:16px}.faq summary{cursor:pointer;font-weight:600}.faq p{color:var(--dim);margin:12px 0;line-height:1.8}.version-link{color:var(--cyan)!important;white-space:nowrap}
 @media(max-width:960px){.nav-links a.version-link{display:block}.nav-links{gap:12px}.hero-inner{gap:24px}.hero h1{font-size:32px}.sec{padding-top:40px}.cta-sec h2{font-size:28px}}
 @media(max-width:560px){.nav-inner{padding:14px 16px}.brand{font-size:16px}.nav-cta{padding:8px 10px}.nav-links a{font-size:12px}.brand b{display:none}.hero{padding-top:40px}.stats{grid-template-columns:repeat(2,1fr)}.term-title{font-size:11px}}
+/* ---- 深色主题（an_theme=dark）：回落 landing 原生深色（本文件浅色覆盖仅服务浅色模式） ---- */
+html[data-theme="dark"]{color-scheme:dark;--bg:#070b14;--bg2:#0b1120;--card:rgba(255,255,255,.04);--line:rgba(255,255,255,.09);--text:#e8edf7;--dim:#94a3b8;--cyan:#22d3ee;--violet:#a78bfa;--grad:linear-gradient(90deg,#22d3ee,#a78bfa 60%,#f472b6)}
+html[data-theme="dark"] b{color:#fff}
+html[data-theme="dark"] .nav{background:rgba(7,11,20,.75);backdrop-filter:blur(14px)}
+html[data-theme="dark"] .glass{backdrop-filter:blur(10px)}
+html[data-theme="dark"] .glow{display:block}
+html[data-theme="dark"] .pill{color:var(--cyan);border-color:rgba(34,211,238,.35);background:rgba(34,211,238,.08)}
+html[data-theme="dark"] .nav-cta,html[data-theme="dark"] .btn.primary{color:#06121a!important;background:var(--grad);box-shadow:0 8px 30px rgba(34,211,238,.25)}
+html[data-theme="dark"] .btn.ghost{background:rgba(255,255,255,.03)}
+html[data-theme="dark"] .term{box-shadow:0 30px 80px rgba(0,0,0,.5)}
+html[data-theme="dark"] .term-bar{background:rgba(255,255,255,.03)}
+html[data-theme="dark"] .term-body{color:#cbd5e1}
+html[data-theme="dark"] .tl.pm,html[data-theme="dark"] .tl.arch,html[data-theme="dark"] .tl.eng,html[data-theme="dark"] .tl.rev{color:#e2e8f0}
+html[data-theme="dark"] .tl.pm-ok,html[data-theme="dark"] .tl.arch-ok,html[data-theme="dark"] .tl.eng-ok,html[data-theme="dark"] .tl.rev-ok{color:#34d399}
+html[data-theme="dark"] .hero-note,html[data-theme="dark"] .foot,html[data-theme="dark"] .foot .tech{color:#7e8ca3}
+html[data-theme="dark"] .step .num{color:rgba(255,255,255,.18)}

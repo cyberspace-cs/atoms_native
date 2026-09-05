@@ -1,20 +1,27 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Atoms Native — 把想法变成应用</title>
   <meta name="description" content="描述你的想法，让 AI 团队协作构建应用。从小游戏、效率工具或展示页面开始，在 Studio 中预览、精修和导出。">
+  <script>document.documentElement.dataset.theme = (function () { try { return localStorage.getItem("an_theme") || "light" } catch (e) { return "light" } })();</script>
   <link rel="stylesheet" href="./home.css">
+  <link rel="stylesheet" href="./theme.css">
+  <script src="./theme.js" defer></script>
 </head>
+
 <body>
   <a class="skip" href="#idea">跳到想法输入框</a>
   <header class="nav">
-    <a class="brand" href="./index.html" aria-label="Atoms Native 首页"><span class="mark" aria-hidden="true">✳</span> Atoms <span>Native</span></a>
+    <a class="brand" href="./index.html" aria-label="Atoms Native 首页"><span class="mark" aria-hidden="true">✳</span>
+      Atoms <span>Native</span></a>
     <nav aria-label="主导航">
       <a href="./discover.html">发现作品</a>
       <a class="version" href="./overview.html">详细版 ↗</a>
       <a class="studio" href="./studio.html">进入 Studio <span aria-hidden="true">→</span></a>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换深色模式">🌙</button>
     </nav>
   </header>
   <main>
@@ -24,8 +31,10 @@
       <p class="sub">从一个小工具到一个新点子。用日常语言描述，在对话中慢慢完善。</p>
       <form action="./studio.html" method="get" class="composer">
         <label for="idea">今天，你想做点什么？</label>
-        <textarea id="idea" name="idea" required maxlength="4000" rows="3" placeholder="例如：做一个每周读书计划，能记录进度、写读后感…" aria-describedby="input-help"></textarea>
-        <div class="composer-bottom"><span id="input-help">描述用途、功能和喜欢的风格</span><button type="submit">开始构建 <span aria-hidden="true">↗</span></button></div>
+        <textarea id="idea" name="idea" required maxlength="4000" rows="3" placeholder="例如：做一个每周读书计划，能记录进度、写读后感…"
+          aria-describedby="input-help"></textarea>
+        <div class="composer-bottom"><span id="input-help">描述用途、功能和喜欢的风格</span><button type="submit">开始构建 <span
+              aria-hidden="true">↗</span></button></div>
       </form>
       <div class="ideas" aria-label="快捷想法">
         <span>从这里开始</span>
@@ -37,12 +46,24 @@
       <p class="note">在 Studio 登录后继续 · 离线演示会明确标注</p>
     </section>
     <section class="path" aria-label="构建过程">
-      <div><span class="step">01</span><h2>说出想法</h2><p>从一句话开始。</p></div>
-      <div><span class="step">02</span><h2>看见作品</h2><p>团队协作，预览成果。</p></div>
-      <div><span class="step">03</span><h2>继续完善</h2><p>对话精修，回滚或导出。</p></div>
+      <div><span class="step">01</span>
+        <h2>说出想法</h2>
+        <p>从一句话开始。</p>
+      </div>
+      <div><span class="step">02</span>
+        <h2>看见作品</h2>
+        <p>团队协作，预览成果。</p>
+      </div>
+      <div><span class="step">03</span>
+        <h2>继续完善</h2>
+        <p>对话精修，回滚或导出。</p>
+      </div>
       <a href="./overview.html">了解完整流程 <span aria-hidden="true">↗</span></a>
     </section>
   </main>
-  <footer><span>Atoms Native · 让想法有一个开始</span><div><a href="./overview.html">详细版</a><a href="./plan.html">迭代记录</a></div></footer>
+  <footer><span>Atoms Native · 让想法有一个开始</span>
+    <div><a href="./overview.html">详细版</a><a href="./plan.html">迭代记录</a></div>
+  </footer>
 </body>
+
 </html>
