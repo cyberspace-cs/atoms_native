@@ -39,8 +39,8 @@ SAMPLE_APPS = {
 SEED_ITEMS = [
     ("团队饮水打卡工具", "帮团队记录每日饮水与目标打卡，自动出统计图表",
      "一个帮团队管理每日饮水与目标打卡的小工具，带统计图表", "工具", "taoxie", "💧"),
-    ("贪吃蛇小游戏", "方向键控制，带得分与最高分记录",
-     "一个贪吃蛇小游戏，键盘方向键控制，带得分和最高分记录", "游戏", "Atoms 团队", "🐍"),
+    ("贪吃蛇小游戏", "键盘方向键/触屏方向键/滑动均可，带得分与最高分记录",
+     "一个贪吃蛇小游戏，键盘方向键或触屏屏幕方向键控制，带得分和最高分记录", "游戏", "Atoms 团队", "🐍"),
     ("程序员个人主页", "深色极简风：头像、技能标签、项目卡片、联系方式",
      "一个程序员的个人主页，含头像区、技能标签、项目卡片和联系方式，深色极简风", "官网", "Atoms 团队", "🧑‍💻"),
     ("极简记账本", "记录收入支出，按月汇总并展示图表",
@@ -78,17 +78,22 @@ SEED_ITEMS = [
 
 
 def _backfill_samples(conn):
-    """把本地示例 HTML 回填到缺少 sample_html 的模板。文件缺失则跳过，永不抛错。"""
+    """把本地示例 HTML 同步进 discover_items：缺 sample_html 的回填，
+    内容与文件不一致的刷新（文件是策展源——改模板示例后重启服务即生效，
+    无需手工动库。2026-09-06 贪吃蛇触屏方向键事故：旧逻辑只在为空时回填，
+    线上库存的旧 sample 永远不会更新）。文件缺失则跳过，永不抛错。
+    """
     for title, path in SAMPLE_APPS.items():
         try:
+            with open(path, encoding="utf-8") as f:
+                html = f.read()
             row = conn.execute(
-                "SELECT id FROM discover_items WHERE title=? AND (sample_html IS NULL OR sample_html='')",
-                (title,)).fetchone()
+                "SELECT id, sample_html FROM discover_items WHERE title=?", (title,)).fetchone()
             if not row:
                 continue
-            with open(path, encoding="utf-8") as f:
-                conn.execute("UPDATE discover_items SET sample_html=? WHERE id=?", (f.read(), row["id"]))
-            conn.commit()
+            if not row["sample_html"] or row["sample_html"] != html:
+                conn.execute("UPDATE discover_items SET sample_html=? WHERE id=?", (html, row["id"]))
+                conn.commit()
         except Exception:
             pass
 

@@ -16,6 +16,7 @@ import json
 import os
 import sys
 import time
+import urllib.parse
 import urllib.request
 
 from playwright.sync_api import expect, sync_playwright
@@ -215,6 +216,76 @@ def run(page):
         AssertionError(f"nWorks={works_n}")) if works_n < 1 else None)
 
 
+def snake_pad_journey(browser):
+    """[9] 贪吃蛇模板触屏方向键（2026-09-06 手机可玩性）。
+
+    顺带端到端验证 discover._backfill_samples 的「内容不一致即刷新」：
+    本地库存的 snake sample 是旧版（无 D-pad），服务重启后 sample 端点
+    必须吐出新版——否则说明回填逻辑回退了。
+    """
+    print("[9] 贪吃蛇触屏方向键")
+    req = urllib.request.Request(
+        f"{BASE}/api/discover?q=" + urllib.parse.quote("贪吃蛇"))
+    items = json.loads(urllib.request.urlopen(req).read())["items"]
+    if not items:
+        raise AssertionError("未找到贪吃蛇模板")
+    sample_url = f"{BASE}/api/discover/{items[0]['id']}/sample"
+
+    # 桌面（pointer:fine + 宽屏）：D-pad 存在于 DOM 但必须隐藏
+    desk = browser.new_page(viewport={"width": 1280, "height": 900})
+    desk.goto(sample_url)
+    check("桌面端 sample 已是新版（.pad 在 DOM）",
+          lambda: (_ for _ in ()).throw(AssertionError("sample 未含 D-pad，回填刷新未生效"))
+          if desk.locator(".pad").count() != 1 else None)
+    check("桌面端 D-pad 隐藏（不遮挡键盘用户）",
+          lambda: expect(desk.locator(".pad")).to_be_hidden())
+    desk.close()
+
+    # 手机视口（≤480px 触发显示）：可见 + 可操作
+    mctx = browser.new_context(viewport={"width": 375, "height": 667}, has_touch=True)
+    mpage = mctx.new_page()
+    merrors = []
+    mpage.on("pageerror", lambda e: merrors.append(str(e)))
+    mpage.goto(sample_url)
+    check("手机宽度下 D-pad 可见", lambda: expect(mpage.locator(".pad")).to_be_visible())
+    mpage.click("#startBtn")
+    check("开局 playing 且初始向右", lambda: (_ for _ in ()).throw(
+        AssertionError(f"state={mpage.evaluate('window.__snake.state')} dir={mpage.evaluate('window.__snake.dir')}"))
+        if not (mpage.evaluate("window.__snake.state") == "playing"
+                and mpage.evaluate("window.__snake.dir.x") == 1) else None)
+
+    # 点按「▼」→ 下一 tick 蛇向下（tick 间隔 ≤140ms，2s 足够）
+    mpage.tap('[data-dir="down"]')
+    for _ in range(20):
+        if mpage.evaluate("window.__snake.dir.y") == 1:
+            break
+        mpage.wait_for_timeout(100)
+    check("点按「▼」后蛇向下", lambda: (_ for _ in ()).throw(
+        AssertionError(f"dir={mpage.evaluate('window.__snake.dir')}"))
+        if mpage.evaluate("window.__snake.dir.y") != 1 else None)
+
+    # 反向守卫：向下时点「▲」必须被忽略（防 180° 掉头咬自己）
+    mpage.tap('[data-dir="up"]')
+    mpage.wait_for_timeout(300)
+    check("反向点按被守卫忽略", lambda: (_ for _ in ()).throw(
+        AssertionError(f"dir={mpage.evaluate('window.__snake.dir')}"))
+        if mpage.evaluate("window.__snake.dir.y") != 1 else None)
+
+    # 中键暂停/继续
+    mpage.tap("#padPause")
+    check("中键暂停生效", lambda: (_ for _ in ()).throw(
+        AssertionError(f"state={mpage.evaluate('window.__snake.state')}"))
+        if mpage.evaluate("window.__snake.state") != "paused" else None)
+    mpage.tap("#padPause")
+    check("再点中键继续", lambda: (_ for _ in ()).throw(
+        AssertionError(f"state={mpage.evaluate('window.__snake.state')}"))
+        if mpage.evaluate("window.__snake.state") != "playing" else None)
+
+    check("贪吃蛇页无 JS 错误", lambda: (_ for _ in ()).throw(
+        AssertionError(f"页面 JS 错误：{merrors[:3]}")) if merrors else None)
+    mctx.close()
+
+
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -224,6 +295,7 @@ def main():
         page.on("pageerror", lambda e: errors.append(str(e)))
         try:
             run(page)
+            snake_pad_journey(browser)
             if errors:
                 raise AssertionError(f"页面 JS 错误：{errors[:3]}")
         finally:

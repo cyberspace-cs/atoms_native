@@ -297,6 +297,24 @@ check("J11 主题三件套 + 防闪烁 + 切换按钮（build 页接入全站主
       "./theme.css" in build and "./theme.js" in build and 'id="themeToggle"' in build
       and 'localStorage.getItem("an_theme")' in build)
 
+# ---------- K. 模板示例守卫：贪吃蛇触屏方向键（2026-09-06 手机可玩性） ----------
+# 证据：手机上没有实体方向键，仅靠隐式滑动不可发现；需要可见 D-pad（pointerdown 即时转向，
+# touch-action:none 防按住滚动；pointer:coarse / ≤480px 显示，桌面隐藏不打扰）。
+snake = (ROOT / "server" / "sample_apps" / "snake.html").read_text(encoding="utf-8")
+check("K1 贪吃蛇屏幕方向键五键在位（四向 + 暂停中键）",
+      snake.count('class="pk"') == 5 and 'id="padPause"' in snake
+      and all(f'data-dir="{d}"' in snake for d in ("up", "down", "left", "right")))
+check("K2 方向键 pointerdown 即时转向 + touch-action:none（按住不滚动）",
+      "pointerdown" in snake and "touch-action: none" in snake
+      and "PAD_DIRS" in snake)
+check("K3 触屏/窄屏自动显示 D-pad，桌面隐藏（pointer:coarse 或 ≤480px）",
+      "@media (pointer: coarse), (max-width: 480px)" in snake)
+check("K4 方向键可访问命名齐全（aria-label × 5 + focus-visible）",
+      all(f'aria-label="{a}"' in snake for a in ("向上", "向左", "向右", "向下", "暂停或继续"))
+      and "focus-visible" in snake)
+check("K5 只读测试钩子在位（E2E 断言方向/状态，无可变引用暴露）",
+      "window.__snake" in snake and "get state()" in snake and "get dir()" in snake)
+
 # ---------- 汇总 ----------
 print()
 if FAILS:

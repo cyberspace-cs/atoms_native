@@ -172,6 +172,65 @@
       color: var(--text);
     }
 
+    /* ---- 触屏方向键：桌面隐藏，触屏/窄屏自动出现（2026-09-06 手机可玩性） ---- */
+    .pad {
+      display: none;
+      grid-template-areas: ". up ." "left mid right" ". down .";
+      grid-template-columns: repeat(3, 64px);
+      grid-auto-rows: 56px;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+
+    .pad .pk {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .1s, border-color .1s;
+    }
+
+    .pad .pk:active {
+      background: rgba(34, 211, 239, .16);
+      border-color: var(--cyan);
+    }
+
+    .pad .pk:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+
+    .pad [data-dir="up"] {
+      grid-area: up
+    }
+
+    .pad [data-dir="left"] {
+      grid-area: left
+    }
+
+    .pad #padPause {
+      grid-area: mid
+    }
+
+    .pad [data-dir="right"] {
+      grid-area: right
+    }
+
+    .pad [data-dir="down"] {
+      grid-area: down
+    }
+
+    @media (pointer: coarse), (max-width: 480px) {
+      .pad {
+        display: grid;
+      }
+    }
+
     @media (max-width: 480px) {
       .stage {
         width: 100%
@@ -187,7 +246,7 @@
 
 <body>
   <h1>🐍 贪吃蛇</h1>
-  <div class="sub">Atoms Native 模板示例 · 方向键或滑动操作</div>
+  <div class="sub">Atoms Native 模板示例 · 方向键、滑动或屏幕按键操作</div>
 
   <div class="hud">
     <div class="box" id="score">
@@ -222,6 +281,15 @@
   <div class="keys">
     <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动</span>
     <span><kbd>空格</kbd> 暂停 / 继续</span>
+    <span>📱 触屏设备画布下方有屏幕方向键</span>
+  </div>
+
+  <div class="pad" role="group" aria-label="屏幕方向键">
+    <button class="pk" type="button" data-dir="up" aria-label="向上">▲</button>
+    <button class="pk" type="button" data-dir="left" aria-label="向左">◀</button>
+    <button class="pk" type="button" id="padPause" aria-label="暂停或继续">⏸</button>
+    <button class="pk" type="button" data-dir="right" aria-label="向右">▶</button>
+    <button class="pk" type="button" data-dir="down" aria-label="向下">▼</button>
   </div>
 
   <script>
@@ -235,6 +303,7 @@
       const $ = (id) => document.getElementById(id);
       const scoreEl = $("scoreVal"), bestEl = $("bestVal");
       const startOverlay = $("startOverlay"), overOverlay = $("overOverlay"), pauseOverlay = $("pauseOverlay");
+      const padPause = $("padPause");
 
       let snake, dir, nextDir, food, score, best, speed, timer, state;
       best = parseInt(localStorage.getItem("snake_best") || "0", 10) || 0;
@@ -356,6 +425,7 @@
           pauseOverlay.classList.add("hidden");
           schedule();
         }
+        syncPauseIcon();
       }
 
       function setDir(x, y) {
@@ -393,6 +463,32 @@
       $("startBtn").onclick = start;
       $("retryBtn").onclick = start;
       $("resumeBtn").onclick = togglePause;
+
+      // ---- 屏幕方向键：触屏/鼠标 pointerdown 即时转向，键盘 Enter/空格也可用 ----
+      const PAD_DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+      function syncPauseIcon() {
+        padPause.textContent = state === "paused" ? "▶" : "⏸";
+      }
+
+      document.querySelectorAll(".pk[data-dir]").forEach((b) => {
+        const d = PAD_DIRS[b.dataset.dir];
+        b.addEventListener("pointerdown", (e) => { e.preventDefault(); setDir(d[0], d[1]); });
+        b.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDir(d[0], d[1]); }
+        });
+      });
+      padPause.addEventListener("pointerdown", (e) => { e.preventDefault(); togglePause(); });
+      padPause.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); togglePause(); }
+      });
+
+      // 只读测试钩子：E2E 断言方向/状态用（loop engineering），无任何可变引用暴露
+      window.__snake = {
+        get state() { return state; },
+        get dir() { return { x: dir.x, y: dir.y }; },
+        get score() { return score; },
+      };
 
       reset();
       draw();
