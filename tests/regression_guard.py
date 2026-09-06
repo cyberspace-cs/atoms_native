@@ -62,6 +62,10 @@ GUARDS = [
     ("public/index.html", 'id="idea"', "简约版想法输入框在位"),
     ("public/index.html", 'action="./build.html"', "简约版表单 GET 提交 build 简约生成页"),
     ("public/index.html", 'href="./overview.html"', "简约版 → 详细版切换链接"),
+    # 2026-09-06 主页模板墙（发现页数据上主页，直观可见；失败静默降级）
+    ("public/index.html", 'id="showcase"', "主页模板墙容器在位（初始 hidden）"),
+    ("public/index.html", "./api/discover?sort=views", "主页模板墙拉发现页最热数据"),
+    ("public/index.html", 'rel="noopener"', "主页模板墙示例新窗口隔离"),
     ("public/overview.html", 'href="./index.html"', "详细版 → 简约版返回链接"),
     # 2026-09-05 build.html 简约生成页成为默认入口（Studio 降级为备选）
     ("public/build.html", 'role="status"', "生成页 live region 容器先于内容存在（WCAG 4.1.3）"),

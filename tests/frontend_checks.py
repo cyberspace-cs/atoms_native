@@ -315,6 +315,22 @@ check("K4 方向键可访问命名齐全（aria-label × 5 + focus-visible）",
 check("K5 只读测试钩子在位（E2E 断言方向/状态，无可变引用暴露）",
       "window.__snake" in snake and "get state()" in snake and "get dir()" in snake)
 
+# ---------- L. 主页模板墙（2026-09-06 发现页模板上主页，直观可见） ----------
+idx = (PUBLIC / "index.html").read_text(encoding="utf-8")
+idx_compact = re.sub(r"\s+", "", idx)
+check("L1 模板墙 section 初始 hidden（失败静默整节隐藏，绝不挡构建主链路）",
+      bool(re.search(r'<section class="showcase"[^>]*hidden[^>]*>', idx))
+      and ".catch(function () {" in idx)
+check("L2 数据接线：拉发现页最热 + 只挑可试玩（has_sample）+ 上限 6 张",
+      "./api/discover?sort=views" in idx and "has_sample" in idx
+      and "slice(0,6)" in idx_compact)
+check("L3 示例新窗口打开且隔离（target=_blank + rel=noopener，与发现页 G3 同规）",
+      'target="_blank"' in idx and 'rel="noopener"' in idx)
+check("L4 全部相对路径 API（子路径部署安全，无绝对 /api）",
+      '"/api/' not in idx and "'/api/" not in idx)
+check("L5 动态渲染防 XSS（emoji/title/description 全部过 esc）",
+      idx_compact.count("esc(it.") >= 3 and "encodeURIComponent(it.id)" in idx_compact)
+
 # ---------- 汇总 ----------
 print()
 if FAILS:

@@ -11,6 +11,7 @@
   https://runebook.dev/zh/docs/playwright/api/class-request/request-failure
 """
 import os
+import re
 import tempfile
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qs
@@ -74,6 +75,31 @@ with sync_playwright() as p:
     page.locator('a.skip').focus()  # skip link 平时在视口外，键盘元素：聚焦后回车触发（模拟 Tab）
     page.keyboard.press('Enter')
     expect(page.locator('#idea')).to_be_focused()
+
+    # ---------- 1b. 主页模板墙（发现页数据上主页，直观可见；2026-09-06） ----------
+    page.wait_for_selector('#showcase:not([hidden]) li a', timeout=5000)
+    cards = page.locator('#showcaseGrid li a')
+    assert 1 <= cards.count() <= 6, f'模板墙应渲染 1-6 张，实际 {cards.count()}'
+    hrefs = cards.evaluate_all('els => els.map(e => e.getAttribute("href"))')
+    assert all(re.fullmatch(r'\./api/discover/\d+/sample', h) for h in hrefs), hrefs
+    assert all(r == 'noopener' for r in cards.evaluate_all('els => els.map(e => e.getAttribute("rel"))'))
+    assert all(t == '_blank' for t in cards.evaluate_all('els => els.map(e => e.getAttribute("target"))'))
+    with page.expect_popup() as pop:  # 点开第一张：新页签应是完整可玩的示例页
+        cards.first.click()
+    child = pop.value
+    child.wait_for_load_state()
+    assert child.title() != '', '示例页应有标题'
+    child.close()
+    # sad path：发现页接口挂掉 → 整节静默隐藏，构建主链路完好
+    def broken_discover(route):
+        route.fulfill(status=500, content_type='application/json', body='{}')
+    page.route('**/api/discover*', broken_discover)
+    page.goto(BASE + '/')
+    page.wait_for_timeout(1200)
+    assert page.evaluate('document.getElementById("showcase").hidden') is True, '接口失败时模板墙必须保持隐藏'
+    assert page.locator('form.composer[action="./build.html"]').count() == 1, '模板墙失败不得影响构建主链路'
+    page.unroute('**/api/discover*', broken_discover)
+    console_errors.clear(); bad_responses.clear()  # 注入的 500 属预期 sad path，不污染全局卫生断言
 
     # ---------- 2. 详细版：SEO/meta + 内容契约 + 动效真实运行 ----------
     t2, d2 = meta_contract('/overview.html', 'Atoms Native — 详细版 · 了解产品')

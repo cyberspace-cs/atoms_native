@@ -10,6 +10,132 @@
   <link rel="stylesheet" href="./home.css">
   <link rel="stylesheet" href="./theme.css">
   <script src="./theme.js" defer></script>
+  <style>
+    /* ---- 社区精选模板墙（数据来自 ./api/discover，异常静默降级为整节隐藏） ---- */
+    .showcase {
+      max-width: 1120px;
+      margin: 0 auto 68px;
+      padding: 0 36px;
+      text-align: left
+    }
+
+    .showcase h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0 0 4px;
+      letter-spacing: .3px
+    }
+
+    .showcase .lede {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 22px;
+      font-family: system-ui, sans-serif
+    }
+
+    .showcase ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px
+    }
+
+    .showcase li {
+      display: grid
+    }
+
+    .showcase li a {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color .15s, transform .15s
+    }
+
+    .showcase li a:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px)
+    }
+
+    .showcase li a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px
+    }
+
+    .showcase .emoji {
+      font-size: 26px;
+      line-height: 1
+    }
+
+    .showcase .t {
+      font-weight: 600;
+      font-size: 15px
+    }
+
+    .showcase .d {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      font-family: system-ui, sans-serif;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden
+    }
+
+    .showcase .tag {
+      margin-top: auto;
+      padding-top: 8px;
+      color: var(--accent);
+      font-size: 12.5px;
+      font-family: system-ui, sans-serif
+    }
+
+    .showcase .more {
+      display: inline-block;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      font-family: system-ui, sans-serif;
+      text-decoration: none;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 2px
+    }
+
+    .showcase .more:hover {
+      color: var(--accent);
+      border-color: var(--accent)
+    }
+
+    .showcase .more:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px
+    }
+
+    @media(max-width:860px) {
+      .showcase ul {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media(max-width:560px) {
+      .showcase {
+        padding: 0 20px
+      }
+
+      .showcase ul {
+        grid-template-columns: 1fr
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -60,10 +186,44 @@
       </div>
       <a href="./overview.html">了解完整流程 <span aria-hidden="true">↗</span></a>
     </section>
+    <section class="showcase" id="showcase" aria-labelledby="sc-title" hidden>
+      <h2 id="sc-title">社区正在构建</h2>
+      <p class="lede">来自发现页的真实模板，点开就能试玩——看到喜欢的，改一句话就是你的。</p>
+      <ul id="showcaseGrid"></ul>
+      <a class="more" href="./discover.html">去发现页看全部模板 <span aria-hidden="true">→</span></a>
+    </section>
   </main>
   <footer><span>Atoms Native · 让想法有一个开始</span>
     <div><a href="./overview.html">详细版</a><a href="./plan.html">迭代记录</a></div>
   </footer>
+  <script>
+    // 模板墙：拉发现页最热模板、只挑可试玩的前 6 个；任何异常静默降级（hidden 保持）——
+    // 模板墙缺失绝不挡「描述想法 → 开始构建」主链路（与 discover 模块同一工程纪律）。
+    (function () {
+      "use strict";
+      var esc = function (s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      };
+      fetch("./api/discover?sort=views").then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function (j) {
+        var picks = (j.items || []).filter(function (i) { return i.has_sample; }).slice(0, 6);
+        if (!picks.length) return;
+        document.getElementById("showcaseGrid").innerHTML = picks.map(function (it) {
+          return '<li><a href="./api/discover/' + encodeURIComponent(it.id) + '/sample"' +
+            ' target="_blank" rel="noopener" title="打开真实示例（新窗口）">' +
+            '<span class="emoji" aria-hidden="true">' + esc(it.emoji) + "</span>" +
+            '<span class="t">' + esc(it.title) + "</span>" +
+            '<span class="d">' + esc(it.description) + "</span>" +
+            '<span class="tag">▶ 可试玩</span></a></li>';
+        }).join("");
+        document.getElementById("showcase").hidden = false;
+      }).catch(function () { /* 静默：整节保持 hidden */ });
+    })();
+  </script>
 </body>
 
 </html>
