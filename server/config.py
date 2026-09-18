@@ -38,8 +38,11 @@ OPENROUTER_MODEL = os.environ.get(
 
 
 def _default_provider() -> str:
-    """Prefer the free community provider (OpenRouter) when its key is present,
-    otherwise fall back to the direct DeepSeek key."""
+    """Prefer the openai-compatible endpoint (e.g. 本地 Qwen) when its base_url
+    is set (本地 vLLM 无需 key), else the free community provider (OpenRouter),
+    else direct DeepSeek key."""
+    if os.environ.get("OPENAI_COMPAT_BASE_URL"):
+        return "openai-compatible"
     if os.environ.get("OPENROUTER_API_KEY"):
         return "openrouter"
     return "deepseek"

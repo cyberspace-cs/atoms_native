@@ -21,6 +21,8 @@ from config import (
 
 PROVIDER_CONFIG = {
     "deepseek": {
+        # 原生 DeepSeek API。本地 Qwen 走 openai-compatible 档（server/.env 驱动），
+        # 勿占用 deepseek 档，两档保持共存可切换。
         "base_url": "https://api.deepseek.com/v1",
         "model": os.environ.get("DEEPSEEK_MODEL", "deepseek-chat"),
         "key": DEEPSEEK_API_KEY,
